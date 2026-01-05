@@ -1,0 +1,17 @@
+{
+  "name": "git-cms",
+  "version": "1.0.0",
+  "description": "A serverless, database-free CMS built on Git plumbing.",
+  "bin": {
+    "git-cms": "./bin/git-cms.js"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "James Ross <james@flyingrobots.dev>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/flyingrobots/git-cms.git"
+  }
+}
