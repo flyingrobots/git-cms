@@ -7,8 +7,10 @@
     "git-cms": "./bin/git-cms.js"
   },
   "scripts": {
+    "serve": "node bin/git-cms.js serve",
     "test": "./test/run-docker.sh",
-    "test:local": "vitest run"
+    "test:local": "vitest run",
+    "test:e2e": "playwright test"
   },
   "author": "James Ross <james@flyingrobots.dev>",
   "license": "Apache-2.0",
@@ -17,6 +19,7 @@
     "url": "git+https://github.com/flyingrobots/git-cms.git"
   },
   "devDependencies": {
+    "@playwright/test": "^1.57.0",
     "vitest": "^4.0.16"
   }
 }

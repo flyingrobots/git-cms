@@ -1,0 +1,8 @@
+node_modules
+.DS_Store
+test-repo/
+test-results/
+playwright-report/
+cms-chunks-*/
+cms-upload-*/
+git-cms-test-*/
