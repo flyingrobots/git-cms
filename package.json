@@ -8,6 +8,7 @@
   },
   "scripts": {
     "serve": "node bin/git-cms.js serve",
+    "dev": "docker compose up app",
     "test": "./test/run-docker.sh",
     "test:local": "vitest run",
     "test:e2e": "playwright test"

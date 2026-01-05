@@ -1,0 +1,25 @@
+services:
+  app:
+    build:
+      context: .
+      target: dev
+    volumes:
+      - .:/app
+      - /app/node_modules
+    ports:
+      - "4637:4637"
+    environment:
+      - PORT=4637
+      - GIT_CMS_ENV=dev
+    command: npm run serve
+
+  test:
+    build:
+      context: .
+      target: test
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      - CI=true
+    command: npm run test:local

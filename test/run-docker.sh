@@ -1,8 +1,5 @@
 #!/usr/bin/env bash
 set -e
 
-# Build
-docker build -f Dockerfile.test -t git-cms-test .
-
-# Run
-docker run --rm git-cms-test
+echo "🐳 Running tests in Docker..."
+docker compose run --rm test
