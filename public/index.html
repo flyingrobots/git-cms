@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Git CMS Admin</title>
+  <style>
+    @import "https://unpkg.com/open-props";
+    @import "https://unpkg.com/open-props/normalize.min.css";
+    @import "https://unpkg.com/open-props/buttons.min.css";
+
+    :root {
+      --brand: var(--blue-6);
+      --surface-1: var(--gray-0);
+      --surface-2: var(--gray-1);
+      --text-1: var(--gray-9);
+      --text-2: var(--gray-7);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --brand: var(--blue-4);
+        --surface-1: var(--gray-9);
+        --surface-2: var(--gray-8);
+        --text-1: var(--gray-1);
+        --text-2: var(--gray-4);
+      }
+    }
+
+    body {
+      background: var(--surface-1);
+      color: var(--text-1);
+      font-family: var(--font-sans);
+      display: grid;
+      grid-template-columns: 300px 1fr;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    aside {
+      background: var(--surface-2);
+      border-right: 1px solid var(--surface-3);
+      padding: var(--size-4);
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: var(--size-4);
+    }
+
+    main {
+      padding: var(--size-5);
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: var(--size-4);
+      max-width: 900px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    h1 { font-size: var(--font-size-4); color: var(--text-1); margin: 0; }
+    h2 { font-size: var(--font-size-2); color: var(--text-2); margin: 0; text-transform: uppercase; letter-spacing: var(--font-letterspacing-1); }
+
+    .article-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: grid;
+      gap: var(--size-2);
+    }
+
+    .article-item {
+      padding: var(--size-2) var(--size-3);
+      border-radius: var(--radius-2);
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .article-item:hover {
+      background: var(--surface-3);
+    }
+
+    .article-item.active {
+      background: var(--brand);
+      color: white;
+    }
+
+    .toolbar {
+      display: flex;
+      gap: var(--size-3);
+      align-items: center;
+      padding-bottom: var(--size-4);
+      border-bottom: 1px solid var(--surface-2);
+    }
+
+    input[type="text"], textarea {
+      width: 100%;
+      background: var(--surface-1);
+      color: var(--text-1);
+      border: 1px solid var(--surface-3);
+      border-radius: var(--radius-2);
+      padding: var(--size-2) var(--size-3);
+      font-family: inherit;
+    }
+
+    textarea {
+      flex: 1;
+      resize: none;
+      font-family: var(--font-mono);
+      line-height: 1.6;
+      min-height: 400px;
+    }
+
+    .btn {
+      background: var(--surface-2);
+      color: var(--text-1);
+      border: 1px solid var(--surface-3);
+      padding: var(--size-2) var(--size-4);
+      border-radius: var(--radius-2);
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .btn-primary {
+      background: var(--brand);
+      color: white;
+      border-color: var(--brand);
+    }
+
+    .status-bar {
+      font-size: var(--font-size-0);
+      color: var(--text-2);
+      margin-top: auto;
+    }
+    
+    .new-btn {
+      width: 100%;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <aside>
+    <div>
+      <h1>Git CMS</h1>
+      <p style="font-size: 0.8rem; color: var(--text-2)">The "Empty Tree" Edition</p>
+    </div>
+    
+    <button class="btn new-btn" onclick="newItem()">+ New Article</button>
+
+    <div>
+      <h2>Drafts</h2>
+      <ul id="draftList" class="article-list"></ul>
+    </div>
+  </aside>
+
+  <main>
+    <div class="toolbar">
+      <input type="text" id="slugInput" placeholder="slug (e.g. hello-world)" style="width: 200px">
+      <input type="text" id="titleInput" placeholder="Article Title" style="flex: 1">
+      <div style="display: flex; gap: var(--size-2)">
+        <button class="btn" onclick="save()">Save Draft</button>
+        <button class="btn btn-primary" onclick="publish()">Publish</button>
+      </div>
+    </div>
+
+    <textarea id="bodyInput" placeholder="Write in Markdown..."></textarea>
+    
+    <div class="toolbar" style="border-top: 1px solid var(--surface-2); border-bottom: none; padding-top: var(--size-4)">
+       <label class="btn">
+         Attach File
+         <input type="file" id="fileInput" hidden onchange="uploadFile(this)">
+       </label>
+       <span id="uploadStatus" style="font-size: 0.9rem"></span>
+    </div>
+    
+    <div id="status" class="status-bar">Ready</div>
+  </main>
+
+  <script>
+    const API = '/api/cms';
+    let currentSha = null;
+
+    async function fetchList() {
+      const res = await fetch(`${API}/list?kind=draft`);
+      const items = await res.json();
+      const ul = document.getElementById('draftList');
+      ul.innerHTML = '';
+      items.forEach(item => {
+        const li = document.createElement('li');
+        li.className = 'article-item';
+        li.textContent = item.slug; // In a real app we'd fetch titles, but listRefs just gives slugs/shas efficiently
+        li.onclick = () => load(item.slug);
+        ul.appendChild(li);
+      });
+    }
+
+    async function load(slug) {
+      document.getElementById('status').textContent = `Loading ${slug}...`;
+      const res = await fetch(`${API}/show?slug=${slug}`);
+      const data = await res.json();
+      
+      document.getElementById('slugInput').value = slug;
+      document.getElementById('titleInput').value = data.title;
+      document.getElementById('bodyInput').value = data.body;
+      currentSha = data.sha;
+      
+      document.querySelectorAll('.article-item').forEach(el => el.classList.remove('active'));
+      // Highlight active
+      document.getElementById('status').textContent = `Loaded ${slug} (${data.sha.slice(0,7)})`;
+    }
+
+    function newItem() {
+      document.getElementById('slugInput').value = '';
+      document.getElementById('titleInput').value = '';
+      document.getElementById('bodyInput').value = '';
+      currentSha = null;
+      document.getElementById('status').textContent = 'New Draft';
+    }
+
+    async function save() {
+      const slug = document.getElementById('slugInput').value;
+      const title = document.getElementById('titleInput').value;
+      const body = document.getElementById('bodyInput').value;
+      const message = `${title}\n\n${body}\n\nStatus: draft`;
+
+      if (!slug) return alert('Slug required');
+
+      document.getElementById('status').textContent = 'Saving...';
+      const res = await fetch(`${API}/snapshot`, {
+        method: 'POST',
+        body: JSON.stringify({ slug, message })
+      });
+      const data = await res.json();
+      currentSha = data.sha;
+      document.getElementById('status').textContent = `Saved ${data.sha.slice(0,7)}`;
+      fetchList();
+    }
+
+    async function publish() {
+      const slug = document.getElementById('slugInput').value;
+      if (!slug) return alert('Slug required');
+      if (!confirm(`Publish ${slug}? This will update the public ref.`)) return;
+
+      document.getElementById('status').textContent = 'Publishing...';
+      const res = await fetch(`${API}/publish`, {
+        method: 'POST',
+        body: JSON.stringify({ slug, sha: currentSha }) // publish current loaded sha
+      });
+      const data = await res.json();
+      document.getElementById('status').textContent = `Published ${data.sha.slice(0,7)}`;
+    }
+
+    async function uploadFile(input) {
+      const file = input.files[0];
+      if (!file) return;
+      
+      const slug = document.getElementById('slugInput').value;
+      if (!slug) return alert('Please enter a slug first');
+
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const b64 = e.target.result.split(',')[1]; // strip data: prefix
+        document.getElementById('uploadStatus').textContent = 'Uploading...';
+        
+        const res = await fetch(`${API}/upload`, {
+          method: 'POST',
+          body: JSON.stringify({
+            slug,
+            filename: file.name,
+            data: b64
+          })
+        });
+        const data = await res.json();
+        
+        // Insert into editor
+        const textarea = document.getElementById('bodyInput');
+        const text = `\n![${file.name}](${data.assetUrl})\n`;
+        textarea.value += text;
+        document.getElementById('uploadStatus').textContent = 'Uploaded!';
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // Init
+    fetchList();
+  </script>
+</body>
+</html>
