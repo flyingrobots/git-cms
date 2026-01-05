@@ -25,16 +25,33 @@ npm link
 
 ## Usage
 
-### 1. Initialize a "Stargate" (Optional but recommended)
-A "Stargate" is a bare repo that acts as a firewall, enforcing fast-forward-only pushes and signature verification.
+### 1. Initialize a "Stargate" (The Gateway)
+
+To use `git-cms` securely, you should pair it with **[git-stargate](https://github.com/flyingrobots/git-stargate)**.
+
+Stargate is a minimal, bash-based Git gateway that enforces:
+- **Fast-Forward Only:** No force pushes allowed.
+- **Signed Commits:** Every update must be cryptographically signed by an authorized key.
+- **Mirroring:** Validated updates are automatically mirrored to public repositories (like GitHub).
 
 ```bash
+# Bootstrap a local stargate for testing
 ./scripts/bootstrap-stargate.sh ~/git/_blog-stargate.git
+
+# Link it
 git remote add stargate ~/git/_blog-stargate.git
 git config remote.stargate.push "+refs/_blog/*:refs/_blog/*"
 ```
 
-### 2. Write a Draft
+### 2. Encryption & Attachments
+
+Attachments are **encrypted client-side** (AES-256-GCM) before they are ever committed to the repository. 
+
+- Keys are managed securely via your OS Keychain (macOS/Linux/Windows).
+- The "Stargate" receives only opaque, encrypted blobs.
+- This effectively gives you "Row Level Security" on a file system—only users with the key can decrypt the assets.
+
+### 3. Write a Draft
 Content is stored in `refs/_blog/articles/<slug>`.
 
 ```bash
