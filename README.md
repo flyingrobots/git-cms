@@ -102,9 +102,6 @@ Publishing fast-forwards `refs/_blog/published/<slug>` to match the draft.
 git cms publish hello-world
 ```
 
-## The Theory
-
-See the blog post: [Git Stunts: Making Linus Roll His Eyes](https://flyingrobots.dev/posts/git-stunts)
-
 ## License
-MIT
+
+Copyright © 2026 James Ross. This software is licensed under the [Apache License](./LICENSE), Version 2.0
