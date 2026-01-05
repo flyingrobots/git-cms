@@ -12,9 +12,12 @@ import { resolveSecret } from './secrets.js';
 
 const CHUNK_SIZE = 256 * 1024; // 256 KiB
 const EMPTY_TREE = '4b825dc642cb6eb9a060e54bf8d69288fbee4904';
-const ENV = (process.env.GIT_CMS_ENV || 'prod').toLowerCase();
-const ENC_KEY_RAW = resolveSecret('CHUNK_ENC_KEY', ENV, 'enc-key');
-const ENC_KEY = ENC_KEY_RAW ? Buffer.from(ENC_KEY_RAW, 'base64') : null;
+
+function getEnvKey() {
+  const ENV = (process.env.GIT_CMS_ENV || 'prod').toLowerCase();
+  const raw = resolveSecret('CHUNK_ENC_KEY', ENV, 'enc-key');
+  return raw ? Buffer.from(raw, 'base64') : null;
+}
 
 function runGit(args, { cwd = process.cwd(), input } = {}) {
   return execFileSync('git', args, {
@@ -30,9 +33,10 @@ function sha256(buf) {
 }
 
 function encryptBuffer(buf) {
-  if (!ENC_KEY) return { buf, meta: null };
+  const key = getEnvKey();
+  if (!key) return { buf, meta: null };
   const nonce = randomBytes(12);
-  const cipher = createCipheriv('aes-256-gcm', ENC_KEY, nonce);
+  const cipher = createCipheriv('aes-256-gcm', key, nonce);
   const enc = Buffer.concat([cipher.update(buf), cipher.final()]);
   const tag = cipher.getAuthTag();
   return { buf: enc, meta: { algorithm: 'aes-256-gcm', nonce: nonce.toString('base64'), tag: tag.toString('base64'), encrypted: true } };
@@ -40,10 +44,11 @@ function encryptBuffer(buf) {
 
 export function decryptBuffer(buf, meta) {
   if (!meta?.encrypted) return buf;
-  if (!ENC_KEY) throw new Error('Cannot decrypt chunk: No key found in Keychain/Environment');
+  const key = getEnvKey();
+  if (!key) throw new Error('Cannot decrypt chunk: No key found in Keychain/Environment');
   const nonce = Buffer.from(meta.nonce, 'base64');
   const tag = Buffer.from(meta.tag, 'base64');
-  const decipher = createDecipheriv('aes-256-gcm', ENC_KEY, nonce);
+  const decipher = createDecipheriv('aes-256-gcm', key, nonce);
   decipher.setAuthTag(tag);
   return Buffer.concat([decipher.update(buf), decipher.final()]);
 }
@@ -56,9 +61,10 @@ export async function chunkFileToRef({ filePath, slug, epoch = 'current', cwd, f
     const baseName = filename || path.basename(filePath);
     const manifest = { slug, epoch, filename: baseName, chunks: [], size: 0 };
 
-    // If encrypting, read whole file to buffer, encrypt, then chunk ciphertext
+    // If encrypting (key exists), read whole file to buffer, encrypt, then chunk ciphertext
+    const key = getEnvKey();
     let sourceBuf = null;
-    if (ENC_KEY) {
+    if (key) {
       sourceBuf = readFileSync(filePath);
       const { buf, meta } = encryptBuffer(sourceBuf);
       manifest.encryption = meta;

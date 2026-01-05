@@ -1,7 +1,3 @@
-// git.js
-// Git helpers for storing articles as commit messages on dedicated refs.
-// No external deps; uses git CLI. All operations are fast-forward only.
-
 import { execFileSync } from 'node:child_process';
 import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
 import os from 'node:os';
@@ -19,7 +15,7 @@ function runGit(args, { cwd = process.cwd(), input } = {}) {
 }
 
 function refFor(slug, kind = 'draft', refPrefix = 'refs/_blog') {
-  const base = refPrefix.replace(///$/, '');
+  const base = refPrefix.replace(/\/$/, '');
   if (kind === 'published') return `${base}/published/${slug}`;
   if (kind === 'comments') return `${base}/comments/${slug}`;
   return `${base}/articles/${slug}`;
@@ -58,7 +54,7 @@ export function writeSnapshot({ slug, message, cwd, refPrefix }) {
   }
   const args = ['commit-tree', EMPTY_TREE];
   if (parentSha) args.push('-p', parentSha);
-  if (process.env.CMS_SIGN === '1') args.push('-S'); // sign with default key if configured
+  if (process.env.CMS_SIGN === '1') args.push('-S'); 
   args.push('-m', message);
   const newSha = runGit(args, { cwd });
   if (parentSha) {
@@ -96,7 +92,6 @@ export function diffMessages(leftSha, rightSha, { cwd, structured = false } = {}
     writeFileSync(bPath, right, 'utf8');
     const diff = runGit(['diff', '--no-index', '--unified=50', '--color=never', aPath, bPath], { cwd });
     if (!structured) return { diff };
-    // simple hunk parser
     const hunks = [];
     const lines = diff.split('\n');
     let current = null;
@@ -124,7 +119,6 @@ export function writeComment({ slug, message, parent, cwd }) {
   const trailers = parent ? `\nParent: ${parent}` : '';
   const fullMessage = `${message.trim()}\n${trailers}`.trimEnd() + '\n';
   const args = ['commit-tree', EMPTY_TREE, '-m', fullMessage];
-  // Comments are linear per ref (append)
   let parentSha = null;
   try {
     parentSha = runGit(['rev-parse', ref], { cwd });
@@ -177,10 +171,10 @@ export function deleteRef(slug, kind = 'draft', { cwd } = {}) {
 }
 
 export function listRefs(kind = 'draft', { cwd, refPrefix } = {}) {
-  const base = (refPrefix || 'refs/_blog').replace(///$/, '');
+  const base = (refPrefix || 'refs/_blog').replace(/\/$/, '');
   const ns =
     kind === 'published'
-      ? `${base}/published/`
+      ? `${base}/published/` 
       : kind === 'comments'
         ? `${base}/comments/`
         : `${base}/articles/`;
@@ -195,7 +189,7 @@ export function listRefs(kind = 'draft', { cwd, refPrefix } = {}) {
     .filter(Boolean)
     .map((line) => {
       const [ref, sha] = line.split(' ');
-      const slug = ref.replace(ns, '').replace(/^refs\/[^/]+\/(articles|published|comments)\//, '');
+      const slug = ref.replace(ns, '').replace(/^refs\/[^/]+\/(articles|published|comments)\/ /, '');
       return { ref, sha, slug };
     });
 }
