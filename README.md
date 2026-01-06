@@ -30,9 +30,6 @@ We provided a safe harness:
 npm test
 # (This automatically runs ./test/run-docker.sh)
 ```
-
-<img width="500" alt="Burnt-Out Linux Penguin" src="https://github.com/user-attachments/assets/87d61150-2f57-47f5-9705-46f8399377d0" align="left" />
-
 ### Start the Server (Dev Mode)
 ```bash
 npm run dev
