@@ -8,7 +8,7 @@ A serverless, database-free CMS built on Git plumbing.
 
 **git-cms** treats your Git repository as a distributed, cryptographically verifiable database. Instead of files, it stores content as commit messages on "empty trees," creating a linear, append-only ledger for articles, comments, or any other structured data.
 
-## Features
+### Features
 
 - **Database-Free:** No SQL, No NoSQL. Just Git objects (Merkle DAG).
 - **Fast-Forward Only:** Enforces strict linear history for provenance.
