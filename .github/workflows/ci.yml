@@ -7,19 +7,47 @@ on:
     branches: [ main ]
 
 jobs:
-  test:
+  unit-test:
+    name: Unit Tests (Docker)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Run Unit Tests
+        run: ./test/run-docker.sh
+
+  e2e-test:
+    name: E2E Tests (Playwright)
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.57.0-jammy
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
-          
+      
+      # Git is required in the container to perform plumbing operations during E2E tests
+      - name: Install Git
+        run: apt-get update && apt-get install -y --no-install-recommends git && rm -rf /var/lib/apt/lists/*
+      
+      - name: Configure Git User
+        run: |
+          git config --global user.email "ci@git-cms.local"
+          git config --global user.name "CI Bot"
+          git config --global init.defaultBranch main
+
       - name: Install Dependencies
         run: npm ci
         
-      - name: Run Tests (Docker)
-        run: npm test
+      - name: Run Playwright Tests
+        run: npm run test:e2e
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 30

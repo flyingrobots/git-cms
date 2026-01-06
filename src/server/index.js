@@ -9,7 +9,7 @@ import { parseArticleCommit } from '../lib/parse.js';
 import { chunkFileToRef } from '../lib/chunks.js';
 
 const __dirname = path.dirname(new URL(import.meta.url).pathname);
-const PORT = process.env.PORT || 4637;
+const PORT = process.env.PORT || 4638;
 const CWD = process.env.GIT_CMS_REPO || process.cwd();
 const ENV = (process.env.GIT_CMS_ENV || 'dev').toLowerCase();
 const REF_PREFIX = process.env.CMS_REF_PREFIX || `refs/_blog/${ENV}`;

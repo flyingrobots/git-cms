@@ -7,9 +7,9 @@ services:
       - .:/app
       - /app/node_modules
     ports:
-      - "4637:4637"
+      - "4638:4638"
     environment:
-      - PORT=4637
+      - PORT=4638
       - GIT_CMS_ENV=dev
     command: npm run serve
 

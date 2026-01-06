@@ -1,5 +1,7 @@
 # git-cms
 
+<img src="./docs/images/hero.png" width="600" alt="Burnt-Out Linux Penguin" align="right" />
+
 A serverless, database-free CMS built on Git plumbing.
 
 > "I'm using `git push` as my API endpoint."
@@ -37,7 +39,7 @@ npm run dev
 # OR
 docker compose up app
 ```
-The API and Admin UI will be available at `http://localhost:4637`.
+The API and Admin UI will be available at `http://localhost:4638`.
 
 ### Run Tests
 ```bash
