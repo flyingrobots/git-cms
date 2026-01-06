@@ -13,11 +13,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      # We don't need setup-node here because 'npm test' runs via Docker
-      # But we need npm to run the script itself? 
-      # Actually 'npm test' is a shell command. 
-      # Wait, the runner has npm.
-      
       - name: Run Unit Tests
         run: ./test/run-docker.sh
 
@@ -50,7 +45,6 @@ jobs:
         run: npm run test:e2e
         env:
           CI: true
-          PORT: 4638
 
       - uses: actions/upload-artifact@v4
         if: always()
