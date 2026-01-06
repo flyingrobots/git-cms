@@ -6,7 +6,18 @@ A serverless, database-free CMS built on Git plumbing.
 
 **git-cms** treats your Git repository as a distributed, cryptographically verifiable database. Instead of files, it stores content as commit messages on "empty trees," creating a linear, append-only ledger for articles, comments, or any other structured data.
 
-## ⚠️ SAFETY WARNING
+## Features
+
+- **Database-Free:** No SQL, No NoSQL. Just Git objects (Merkle DAG).
+- **Fast-Forward Only:** Enforces strict linear history for provenance.
+- **Atomic Publishes:** "Publishing" is just a pointer update (CAS).
+- **Infinite History:** Every draft save is a commit. Scrub back to any point in time.
+
+## Development
+
+### ⚠️ SAFETY WARNING
+
+We use Docker Compose to ensure a consistent, safe environment.
 
 **If you clone this repo and want to run the tests, ALWAYS run them in Docker.**
 
@@ -18,16 +29,7 @@ npm test
 # (This automatically runs ./test/run-docker.sh)
 ```
 
-## Features
-
-- **Database-Free:** No SQL, No NoSQL. Just Git objects (Merkle DAG).
-- **Fast-Forward Only:** Enforces strict linear history for provenance.
-- **Atomic Publishes:** "Publishing" is just a pointer update (CAS).
-- **Infinite History:** Every draft save is a commit. Scrub back to any point in time.
-
-## Development
-
-We use Docker Compose to ensure a consistent, safe environment.
+<img width="500" alt="Burnt-Out Linux Penguin" src="https://github.com/user-attachments/assets/87d61150-2f57-47f5-9705-46f8399377d0" align="left" />
 
 ### Start the Server (Dev Mode)
 ```bash
