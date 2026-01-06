@@ -1,5 +1,7 @@
 # git-cms
 
+<img src="./docs/images/hero.png" width="600" alt="Burnt-Out Linux Penguin" align="right" />
+
 A serverless, database-free CMS built on Git plumbing.
 
 > "I'm using `git push` as my API endpoint."
