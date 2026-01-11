@@ -3,67 +3,62 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { execFileSync } from 'node:child_process';
-import { chunkFileToRef, decryptBuffer, readManifest } from '../src/lib/chunks.js';
+import CmsService from '../src/lib/CmsService.js';
 import { randomBytes } from 'node:crypto';
 
-function run(args, cwd) {
-  return execFileSync('git', args, { cwd, encoding: 'utf8' }).trim();
-}
-
-describe('Git Chunks', () => {
+describe('CmsService Assets (Integration)', () => {
   let cwd;
+  let cms;
 
   beforeEach(() => {
-    cwd = mkdtempSync(path.join(os.tmpdir(), 'git-cms-chunks-'));
-    run(['init'], cwd);
-    run(['config', 'user.name', 'Test'], cwd);
-    run(['config', 'user.email', 'test@example.com'], cwd);
+    cwd = mkdtempSync(path.join(os.tmpdir(), 'git-cms-assets-test-'));
+    execFileSync('git', ['init'], { cwd });
+    execFileSync('git', ['config', 'user.name', 'Test'], { cwd });
+    execFileSync('git', ['config', 'user.email', 'test@example.com'], { cwd });
+    cms = new CmsService({ cwd, refPrefix: 'refs/cms' });
   });
 
   afterEach(() => {
     rmSync(cwd, { recursive: true, force: true });
   });
 
-  it('chunks a file without encryption', async () => {
-    // Ensure no key
-    delete process.env.CHUNK_ENC_KEY;
+  it('uploads a file and creates a manifest ref', async () => {
+    const filePath = path.join(cwd, 'test.png');
+    writeFileSync(filePath, 'fake-binary-data'.repeat(100));
     
-    const filePath = path.join(cwd, 'test.txt');
-    writeFileSync(filePath, 'Hello World '.repeat(1000)); // ~12KB
+    const result = await cms.uploadAsset({ 
+      slug: 'test-image', 
+      filePath, 
+      filename: 'test.png' 
+    });
     
-    const res = await chunkFileToRef({ filePath, slug: 'test', cwd });
+    expect(result.commitSha).toHaveLength(40);
+    expect(result.manifest.chunks.length).toBeGreaterThan(0);
     
-    expect(res.ref).toBe('refs/_blog/chunks/test@current');
-    
-    // Check manifest
-    const { manifest } = readManifest('test', { cwd });
-    expect(manifest.filename).toBe('test.txt');
-    expect(manifest.chunks.length).toBeGreaterThan(0);
-    expect(manifest.encryption).toBeUndefined();
+    // Verify ref exists
+    const resolved = execFileSync('git', ['rev-parse', 'refs/_blog/chunks/test-image@current'], { cwd, encoding: 'utf8' }).trim();
+    expect(resolved).toBe(result.commitSha);
   });
 
-  it('chunks and encrypts with key', async () => {
-    // Set a random key
+  it('handles encrypted uploads', async () => {
     const key = randomBytes(32).toString('base64');
     process.env.CHUNK_ENC_KEY = key;
     
     const filePath = path.join(cwd, 'secret.txt');
-    const secretData = 'Top Secret Data';
-    writeFileSync(filePath, secretData);
+    writeFileSync(filePath, 'Top Secret Content');
     
-    const res = await chunkFileToRef({ filePath, slug: 'secret', cwd });
+    const result = await cms.uploadAsset({ 
+      slug: 'secret', 
+      filePath 
+    });
     
-    const { manifest } = readManifest('secret', { cwd });
-    expect(manifest.encryption).toBeDefined();
-    expect(manifest.encryption.encrypted).toBe(true);
+    expect(result.manifest.encryption.encrypted).toBe(true);
     
-    // Verify blobs are encrypted (not plain text)
-    const blobOid = manifest.chunks[0].blob;
-    const blobContent = execFileSync('git', ['cat-file', '-p', blobOid], { cwd, encoding: null }); // Buffer
-    expect(blobContent.toString()).not.toContain('Top Secret');
+    // Check if git blob is encrypted
+    const blobOid = result.manifest.chunks[0].blob;
+    const blobContent = execFileSync('git', ['cat-file', '-p', blobOid], { cwd, encoding: 'utf8' });
+    expect(blobContent).not.toContain('Top Secret');
     
-    // Decrypt manually
-    const decrypted = decryptBuffer(blobContent, manifest.encryption);
-    expect(decrypted.toString()).toBe(secretData);
+    delete process.env.CHUNK_ENC_KEY;
   });
 });

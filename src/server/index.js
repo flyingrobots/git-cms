@@ -3,10 +3,7 @@ import url from 'node:url';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import { execFileSync } from 'node:child_process';
-import { listRefs, readTipMessage, history, writeSnapshot, fastForwardPublished, deleteRef, diffMessages, writeComment, listComments } from '../lib/git.js';
-import { parseArticleCommit } from '../lib/parse.js';
-import { chunkFileToRef } from '../lib/chunks.js';
+import CmsService from '../lib/CmsService.js';
 
 const __dirname = path.dirname(new URL(import.meta.url).pathname);
 const PORT = process.env.PORT || 4638;
@@ -15,7 +12,9 @@ const ENV = (process.env.GIT_CMS_ENV || 'dev').toLowerCase();
 const REF_PREFIX = process.env.CMS_REF_PREFIX || `refs/_blog/${ENV}`;
 const PUBLIC_DIR = path.resolve(__dirname, '../../public');
 
-// Minimal static file server helper
+// Initialize the core service
+const cms = new CmsService({ cwd: CWD, refPrefix: REF_PREFIX });
+
 const MIME_TYPES = {
   '.html': 'text/html',
   '.js': 'text/javascript',
@@ -27,13 +26,19 @@ const MIME_TYPES = {
 };
 
 function serveStatic(req, res) {
-  let filePath = path.join(PUBLIC_DIR, req.url === '/' ? 'index.html' : req.url);
-  const ext = path.extname(filePath).toLowerCase();
-  
-  if (!fs.existsSync(filePath)) {
+  let relativePath = req.url === '/' ? 'index.html' : req.url.split('?')[0];
+  const filePath = path.join(PUBLIC_DIR, relativePath);
+
+  // Security: Prevent path traversal
+  if (!filePath.startsWith(PUBLIC_DIR)) {
     return false;
   }
 
+  if (!fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
+    return false;
+  }
+
+  const ext = path.extname(filePath).toLowerCase();
   const contentType = MIME_TYPES[ext] || 'application/octet-stream';
   res.writeHead(200, { 'Content-Type': contentType });
   fs.createReadStream(filePath).pipe(res);
@@ -45,7 +50,7 @@ function send(res, status, payload) {
   res.writeHead(status, {
     'Content-Type': 'application/json',
     'Content-Length': Buffer.byteLength(body),
-    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Origin': '*', // In prod, replace with config
     'Access-Control-Allow-Methods': 'GET,POST,DELETE,OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
   });
@@ -56,9 +61,8 @@ async function handler(req, res) {
   const parsed = url.parse(req.url, true);
   const { pathname, query } = parsed;
 
-  console.log(`${req.method} ${pathname}`);
+  console.log(`[${new Date().toISOString()}] ${req.method} ${pathname}`);
 
-  // CORS Preflight
   if (req.method === 'OPTIONS') {
     res.writeHead(204, {
       'Access-Control-Allow-Origin': '*',
@@ -68,56 +72,48 @@ async function handler(req, res) {
     return res.end();
   }
 
-  // API Routes
   try {
     if (pathname.startsWith('/api/cms')) {
+      // GET /api/cms/list?kind=articles|published|comments
       if (req.method === 'GET' && pathname === '/api/cms/list') {
-        const kind = query.kind || 'draft';
-        return send(res, 200, listRefs(kind, { cwd: CWD, refPrefix: REF_PREFIX }));
+        const kind = query.kind || 'articles';
+        return send(res, 200, cms.listArticles({ kind }));
       }
 
+      // GET /api/cms/show?slug=xxx&kind=articles
       if (req.method === 'GET' && pathname === '/api/cms/show') {
-        const slug = query.slug;
-        const kind = query.kind || 'draft';
+        const { slug, kind } = query;
         if (!slug) return send(res, 400, { error: 'slug required' });
-        const { sha, message } = readTipMessage(slug, kind, { cwd: CWD, refPrefix: REF_PREFIX });
-        const parsedMsg = parseArticleCommit(message);
-        return send(res, 200, { sha, ...parsedMsg });
+        return send(res, 200, cms.readArticle({ slug, kind: kind || 'articles' }));
       }
 
-      if (req.method === 'GET' && pathname === '/api/cms/history') {
-        const slug = query.slug;
-        const limit = Number(query.limit || 20);
-        if (!slug) return send(res, 400, { error: 'slug required' });
-        const entries = history(slug, { cwd: CWD, limit, refPrefix: REF_PREFIX });
-        return send(res, 200, entries);
-      }
-
+      // POST /api/cms/snapshot
       if (req.method === 'POST' && pathname === '/api/cms/snapshot') {
         let body = '';
         req.on('data', (c) => (body += c));
         req.on('end', () => {
-          const { slug, message, sign } = JSON.parse(body || '{}');
-          if (!slug || !message) return send(res, 400, { error: 'slug and message required' });
-          if (sign) process.env.CMS_SIGN = '1';
-          const result = writeSnapshot({ slug, message, cwd: CWD, refPrefix: REF_PREFIX });
+          const { slug, title, body: content, trailers } = JSON.parse(body || '{}');
+          if (!slug || !title) return send(res, 400, { error: 'slug and title required' });
+          const result = cms.saveSnapshot({ slug, title, body: content, trailers });
           return send(res, 200, result);
         });
         return;
       }
 
+      // POST /api/cms/publish
       if (req.method === 'POST' && pathname === '/api/cms/publish') {
         let body = '';
         req.on('data', (c) => (body += c));
         req.on('end', () => {
           const { slug, sha } = JSON.parse(body || '{}');
           if (!slug) return send(res, 400, { error: 'slug required' });
-          const result = fastForwardPublished(slug, sha || readTipMessage(slug, 'draft', { cwd: CWD, refPrefix: REF_PREFIX }).sha, { cwd: CWD, refPrefix: REF_PREFIX });
+          const result = cms.publishArticle({ slug, sha });
           return send(res, 200, result);
         });
         return;
       }
 
+      // POST /api/cms/upload
       if (req.method === 'POST' && pathname === '/api/cms/upload') {
         let body = '';
         req.on('data', (c) => (body += c));
@@ -125,13 +121,14 @@ async function handler(req, res) {
           try {
             const { slug, filename, data } = JSON.parse(body || '{}');
             if (!slug || !filename || !data) return send(res, 400, { error: 'slug, filename, data required' });
-            // In a real app we'd stream this, but for the stunt we assume valid base64 payload
+            
             const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cms-upload-'));
             const filePath = path.join(tmpDir, filename);
             fs.writeFileSync(filePath, Buffer.from(data, 'base64'));
-            const result = await chunkFileToRef({ filePath, slug, epoch: 'current', cwd: CWD, filename });
-            // We return a "virtual" asset URL that the extractor would handle
-            const assetUrl = `/blog/${ENV}/assets/${slug}/${result.firstDigest}`;
+            
+            const result = await cms.uploadAsset({ slug, filePath, filename });
+            const assetUrl = `/blog/${ENV}/assets/${slug}/${result.manifest.chunks[0].digest}`;
+            
             fs.rmSync(tmpDir, { recursive: true, force: true });
             return send(res, 200, { ...result, assetUrl });
           } catch (err) {
@@ -142,17 +139,11 @@ async function handler(req, res) {
         return;
       }
 
-      send(res, 404, { error: 'API endpoint not found' });
-      return;
+      return send(res, 404, { error: 'API endpoint not found' });
     }
 
-    // Static Files
-    if (serveStatic(req, res)) {
-      return;
-    }
-
+    if (serveStatic(req, res)) return;
     send(res, 404, { error: 'Not found' });
-
   } catch (err) {
     console.error(err);
     send(res, 500, { error: err.message });
@@ -162,7 +153,10 @@ async function handler(req, res) {
 export function startServer() {
   const server = http.createServer(handler);
   server.listen(PORT, () => {
-    console.log(`[git-cms] listening on http://localhost:${PORT}`);
-    console.log(`[git-cms] Admin UI: http://localhost:${PORT}/`);
+    const addr = server.address();
+    const actualPort = typeof addr === 'string' ? addr : addr.port;
+    console.log(`[git-cms] listening on http://localhost:${actualPort}`);
+    console.log(`[git-cms] Admin UI: http://localhost:${actualPort}/`);
   });
+  return server;
 }

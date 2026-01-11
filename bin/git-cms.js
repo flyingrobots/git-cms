@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 
-import { writeSnapshot, fastForwardPublished, listRefs, readTipMessage } from '../src/lib/git.js';
-import { parseArticleCommit } from '../src/lib/parse.js';
-import { startServer } from '../src/server/index.js';
+import CmsService from '../src/lib/CmsService.js';
 
 async function main() {
   const [,, cmd, ...args] = process.argv;
   const cwd = process.cwd();
-  const refPrefix = process.env.CMS_REF_PREFIX;
+  const refPrefix = process.env.CMS_REF_PREFIX || 'refs/_blog/dev';
+
+  const cms = new CmsService({ cwd, refPrefix });
 
   try {
     switch (cmd) {
@@ -18,9 +18,8 @@ async function main() {
         const chunks = [];
         for await (const chunk of process.stdin) chunks.push(chunk);
         const body = Buffer.concat(chunks).toString('utf8');
-        const message = `${title}\n\n${body}\n\nStatus: draft\n`;
         
-        const res = writeSnapshot({ slug, message, cwd, refPrefix });
+        const res = await cms.saveSnapshot({ slug, title, body });
         console.log(`Saved draft: ${res.sha} (${res.ref})`);
         break;
       }
@@ -28,26 +27,25 @@ async function main() {
         const [slug] = args;
         if (!slug) throw new Error('Usage: git cms publish <slug>');
         
-        const tip = readTipMessage(slug, 'draft', { cwd, refPrefix });
-        const res = fastForwardPublished(slug, tip.sha, { cwd, refPrefix });
+        const res = await cms.publishArticle({ slug });
         console.log(`Published: ${res.sha} (${res.ref})`);
         break;
       }
       case 'list': {
-        const items = listRefs('draft', { cwd, refPrefix });
+        const items = await cms.listArticles();
         if (items.length === 0) console.log("No articles found.");
-        items.forEach(i => console.log(`- ${i.slug}: ${i.ref}`));
+        items.forEach(i => console.log(`- ${i.slug}: ${i.sha}`));
         break;
       }
       case 'show': {
         const [slug] = args;
         if (!slug) throw new Error('Usage: git cms show <slug>');
-        const { message } = readTipMessage(slug, 'draft', { cwd, refPrefix });
-        const { title, body } = parseArticleCommit(message);
-        console.log(`# ${title}\n\n${body}`);
+        const article = await cms.readArticle({ slug });
+        console.log(`# ${article.title}\n\n${article.body}`);
         break;
       }
       case 'serve': {
+        const { startServer } = await import('../src/server/index.js');
         startServer();
         break;
       }
