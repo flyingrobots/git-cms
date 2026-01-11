@@ -1,7 +1,17 @@
+# IMPORTANT: Run docker compose from THIS directory (git-cms/)
+# The build context is set to parent (..) so Docker can access both
+# git-cms/ and git-stunts/ directories for the build.
+#
+# Expected structure:
+#   ~/git/
+#     git-cms/       ← Run docker compose here
+#     git-stunts/    ← Lego blocks (required)
+
 services:
   app:
     build:
-      context: .
+      context: ..  # Parent dir so we can access both git-cms and git-stunts
+      dockerfile: git-cms/Dockerfile
       target: dev
     volumes:
       - .:/app
@@ -15,7 +25,8 @@ services:
 
   test:
     build:
-      context: .
+      context: ..  # Parent dir so we can access both git-cms and git-stunts
+      dockerfile: git-cms/Dockerfile
       target: test
     volumes:
       - .:/app

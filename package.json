@@ -9,7 +9,11 @@
   "scripts": {
     "serve": "node bin/git-cms.js serve",
     "dev": "docker compose up app",
+    "demo": "./scripts/demo.sh",
+    "quickstart": "./scripts/quickstart.sh",
+    "setup": "./scripts/setup.sh",
     "test": "./test/run-docker.sh",
+    "test:setup": "./test/run-setup-tests.sh",
     "test:local": "vitest run",
     "test:e2e": "playwright test"
   },

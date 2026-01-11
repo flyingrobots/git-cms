@@ -8,17 +8,42 @@ A serverless, database-free CMS built on Git plumbing.
 
 **git-cms** treats your Git repository as a distributed, cryptographically verifiable database. Instead of files, it stores content as commit messages on "empty trees," creating a linear, append-only ledger for articles, comments, or any other structured data.
 
+## Quick Start (Docker - Safe!)
+
+### One-Time Setup
+
+```bash
+# Clone this repo
+git clone https://github.com/flyingrobots/git-cms.git
+cd git-cms
+
+# Run setup (clones dependencies, checks Docker)
+npm run setup
+```
+
+### Try It Out
+
+```bash
+# Option 1: See a demo (recommended first time)
+npm run demo
+
+# Option 2: Interactive menu
+npm run quickstart
+
+# Option 3: Just start the server
+npm run dev
+# Open http://localhost:4638
+```
+
+**Everything runs in Docker - completely safe for your local Git setup.**
+
 ## ⚠️ SAFETY WARNING
 
-**If you clone this repo and want to run the tests, ALWAYS run them in Docker.**
+**This project manipulates Git repositories at a low level. ALWAYS use Docker for testing.**
 
-The tests create, destroy, and manipulate Git repositories. While we try to use temporary directories, running low-level plumbing commands against your host filesystem is a risk you shouldn't take.
+The tests create, destroy, and manipulate Git repositories. Running low-level plumbing commands on your host filesystem is risky - a typo could affect your local Git setup. That's why we built Docker isolation into everything.
 
-We provided a safe harness:
-```bash
-npm test
-# (This automatically runs ./test/run-docker.sh)
-```
+**Read more:** [TESTING_GUIDE.md](./TESTING_GUIDE.md) | [docs/GETTING_STARTED.md](./docs/GETTING_STARTED.md)
 
 ## Features
 

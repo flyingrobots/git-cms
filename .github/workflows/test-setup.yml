@@ -1,0 +1,34 @@
+name: Test Setup Script
+
+on:
+  push:
+    branches: [main, git-stunts]
+    paths:
+      - 'scripts/setup.sh'
+      - 'test/setup.bats'
+      - 'test/run-setup-tests.sh'
+      - 'test/Dockerfile.bats'
+  pull_request:
+    paths:
+      - 'scripts/setup.sh'
+      - 'test/setup.bats'
+      - 'test/run-setup-tests.sh'
+      - 'test/Dockerfile.bats'
+
+jobs:
+  test-setup-script:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Run BATS tests
+        run: npm run test:setup
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: bats-test-results
+          path: test-results/
