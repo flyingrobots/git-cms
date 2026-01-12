@@ -54,8 +54,19 @@ The tests create, destroy, and manipulate Git repositories. Running low-level pl
 
 ## Development
 
+### ⚠️ SAFETY WARNING
+
 We use Docker Compose to ensure a consistent, safe environment.
 
+**If you clone this repo and want to run the tests, ALWAYS run them in Docker.**
+
+The tests create, destroy, and manipulate Git repositories. While we try to use temporary directories, running low-level plumbing commands against your host filesystem is a risk you shouldn't take.
+
+We provided a safe harness:
+```bash
+npm test
+# (This automatically runs ./test/run-docker.sh)
+```
 ### Start the Server (Dev Mode)
 ```bash
 npm run dev
@@ -129,9 +140,6 @@ Publishing fast-forwards `refs/_blog/published/<slug>` to match the draft.
 git cms publish hello-world
 ```
 
-## The Theory
-
-See the blog post: [Git Stunts: Making Linus Roll His Eyes](https://flyingrobots.dev/posts/git-stunts)
-
 ## License
-MIT
+
+Copyright © 2026 James Ross. This software is licensed under the [Apache License](./LICENSE), Version 2.0
