@@ -1,0 +1,47 @@
+\section{Architectural Decisions}
+
+\subsection*{ADR-001: Use Commit Messages, Not Files}
+\textbf{Context:} Need to store articles in Git without polluting the working directory or causing merge conflicts on files.
+
+\textbf{Decision:} Store article content (title, body, trailers) as Git commit messages pointing to the canonical empty tree (\texttt{4b825dc...}).
+
+\textbf{Rationale:}
+\begin{itemize}[noitemsep]
+    \item Commits have parent pointers, enabling native version history.
+    \item Commits support GPG signing for non-repudiation.
+    \item Keeps the working directory completely clean for application code.
+\end{itemize}
+
+\textbf{Status:} Accepted.
+
+\subsection*{ADR-002: Use RFC 822 Trailers, Not JSON}
+\textbf{Context:} Need structured metadata (Status, Author, etc.) inside commit messages.
+
+\textbf{Decision:} Use RFC 822 trailers (key-value pairs at the end of the message).
+
+\textbf{Rationale:}
+\begin{itemize}[noitemsep]
+    \item Git-native format (compatible with \texttt{git interpret-trailers}).
+    \item Human-readable and extremely diff-friendly.
+    \item Faster to parse from the end of the message.
+\end{itemize}
+
+\textbf{Status:} Accepted.
+
+\subsection*{ADR-003: Fast-Forward Only Publishing}
+\textbf{Context:} Prevent published content from being altered or rewritten after release.
+
+\textbf{Decision:} The publishing operation must be a strict fast-forward from the draft ref to the published ref.
+
+\textbf{Rationale:} Guarantees that the exact same commit SHA that was reviewed/drafted is the one being published.
+
+\textbf{Status:} Accepted.
+
+\subsection*{ADR-004: Client-Side Encryption for Assets}
+\textbf{Context:} Git gateways or mirror repositories may be untrusted.
+
+\textbf{Decision:} Encrypt all binary assets (images, PDFs) client-side using AES-256-GCM before uploading.
+
+\textbf{Rationale:} defense-in-depth; the gateway only ever receives opaque encrypted blobs and an authenticated manifest.
+
+\textbf{Status:} Accepted.

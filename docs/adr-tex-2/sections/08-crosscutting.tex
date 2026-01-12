@@ -1,0 +1,56 @@
+\section{Crosscutting Concepts}
+
+\subsection{Concept 1: Merkle DAG as Event Log}
+
+\begin{figure}[H]
+\centering
+\resizebox{\textwidth}{!}{
+\begin{tikzpicture}[node distance=1.5cm, auto]
+    \node [block, dashed] (Empty) {Empty Tree\\4b825dc...};
+    \node [block, right=of Empty] (C1) {Commit 1\\(Draft v1)};
+    \node [block, right=of C1] (C2) {Commit 2\\(Draft v2)};
+    \node [block, right=of C2] (C3) {Commit 3\\(Draft v3)};
+
+    \draw [line] (C1) -- (Empty);
+    \draw [line] (C2) -- (C1);
+    \draw [line] (C2) to [bend left=30] (Empty);
+    \draw [line] (C3) -- (C2);
+    \draw [line] (C3) to [bend right=45] (Empty);
+    
+    \node [block, above=1cm of C3] (DraftRef) {\texttt{refs/.../hello-world}};
+    \node [block, above=1cm of C2] (PubRef) {\texttt{refs/published/...}};
+    
+    \draw [dashed-line] (DraftRef) -- (C3);
+    \draw [dashed-line] (PubRef) -- (C2);
+\end{tikzpicture}
+}
+\caption{The Merkle DAG structure acting as an immutable event log.}
+\end{figure}
+
+\subsection{Concept 2: Compare-and-Swap (CAS)}
+The system uses \texttt{git update-ref <ref> <newSHA> <oldSHA>} to ensure atomic updates and prevent race conditions. If the \texttt{oldSHA} has changed since it was last read, the update is rejected.
+
+\subsection{Concept 3: Client-Side Encryption}
+
+\begin{figure}[H]
+\centering
+\resizebox{\textwidth}{!}{
+\begin{tikzpicture}[node distance=1.5cm]
+    \node [block] (Input) {Plaintext File};
+    \node [block, below=of Input] (Enc) {\textbf{Encryption}\\AES-256-GCM};
+    \node [block, below=of Enc, fill=gray!5] (Blob) {Encrypted Blobs\\(Git Objects)};
+    \node [block, right=2cm of Blob] (Manifest) {CBOR Manifest\\(OID, IV, AuthTag)};
+
+    \draw [line] (Input) -- (Enc);
+    \draw [line] (Enc) -- (Blob);
+    \draw [line] (Blob) -- (Manifest);
+    
+    \node [draw, dashed, thick, inner sep=10pt, fit=(Input) (Enc)] (AuthorBox) {};
+    \node [anchor=south, font=\small\itshape] at (AuthorBox.north) {Author Laptop};
+    
+    \node [draw, dashed, thick, inner sep=10pt, fit=(Blob)] (GatewayBox) {};
+    \node [anchor=south, font=\small\itshape] at (GatewayBox.north) {Untrusted Gateway};
+\end{tikzpicture}
+}
+\caption{End-to-end encryption pipeline for assets.}
+\end{figure}

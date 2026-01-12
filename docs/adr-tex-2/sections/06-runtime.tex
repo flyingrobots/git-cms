@@ -1,0 +1,20 @@
+\section{Runtime View}
+
+\subsection{Scenario 1: Create Draft Article}
+
+\begin{figure}[H]
+\centering
+\resizebox{\textwidth}{!}{
+    \input{figures/draft-sequence}
+}
+\caption{Sequence diagram for creating a new draft article.}
+\end{figure}
+
+\subsection{Scenario 2: Publish Article}
+Publishing is \textbf{just a ref copy}. No new commits are created. This operation is idempotent and enforces fast-forward updates.
+
+\subsection{Scenario 3: Upload Encrypted Asset}
+The system splits files into 256KB chunks, encrypts them via AES-256-GCM, and stores them as Git blobs. The plaintext never touches the object store.
+
+\subsection{Scenario 4: List All Published Articles}
+Listing articles involves a linear scan of the ref namespace (\texttt{O(n)}). For large workloads, an external index is recommended.

@@ -117,9 +117,15 @@ EOF
   # Don't create git-stunts
   # Simulate user declining (send 'n' to stdin)
   run bash scripts/setup.sh <<< "n"
+
+  # Debug: print actual output
+  echo "Status: $status" >&3
+  echo "Output:" >&3
+  echo "$output" >&3
+
   [ "$status" -eq 1 ]
   [[ "$output" =~ "git-stunts not found" ]]
-  [[ "$output" =~ "Clone git-stunts?" ]]
+  [[ "$output" =~ "Would you like me to clone it now" ]]
   [[ "$output" =~ "Setup cancelled" ]]
 }
 

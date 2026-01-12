@@ -1,0 +1,21 @@
+\begin{tikzpicture}[node distance=1.5cm, auto]
+    \node [blockshaded] (CMS) {\textbf{CmsService}\\\texttt{src/lib}};
+    \node [block, above left=1cm and 0.5cm of CMS] (CLI) {CLI\\\texttt{bin/git-cms.js}};
+    \node [block, above right=1cm and 0.5cm of CMS] (HTTP) {HTTP Server\\\texttt{src/server}};
+    \node [draw, dashed, thick, inner sep=10pt, fit=(CLI) (HTTP) (CMS)] (AppLayer) {};
+    \node [anchor=south] at (AppLayer.north) {\small\textbf{Application Layer}};
+
+    \node [block, below=1.5cm of CMS] (Graph) {Graph\\empty-graph};
+    \node [block, left=0.5cm of Graph] (Codec) {Codec\\trailer-codec};
+    \node [block, right=0.5cm of Graph] (CAS) {CAS\\cas};
+    \node [block, below=1cm of Graph] (Plumbing) {Plumbing\\git-protocol};
+    \node [block, right=0.5cm of CAS] (Vault) {Vault\\secrets};
+    \node [draw, dashed, thick, inner sep=10pt, fit=(Plumbing) (Codec) (Graph) (CAS) (Vault)] (LegoLayer) {};
+    \node [anchor=north] at (LegoLayer.south) {\small\textbf{Lego Blocks (@git-stunts)}};
+
+    \draw [line] (CLI) -- (CMS); \draw [line] (HTTP) -- (CMS);
+    \draw [line] (CMS) -- (Codec); \draw [line] (CMS) -- (Graph);
+    \draw [line] (CMS) -- (CAS); \draw [line] (CMS) -- (Vault);
+    \draw [line] (CMS) -- (Plumbing); \draw [line] (Graph) -- (Plumbing);
+    \draw [line] (CAS) -- (Plumbing);
+\end{tikzpicture}

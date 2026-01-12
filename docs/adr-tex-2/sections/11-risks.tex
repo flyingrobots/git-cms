@@ -1,0 +1,21 @@
+\section{Risks \& Technical Debt}
+
+\subsection{Risk 1: SHA-1 Collision}
+Git's reliance on SHA-1 is a known cryptographic risk. While the likelihood of a practical attack on a blog is low, the system should monitor Git's transition to SHA-256.
+
+\subsection{Risk 2: Repository Growth}
+Every draft save creates a permanent commit. Over years of active use, the object store could grow significantly. Regular \texttt{git gc --aggressive} and ref pruning strategies are needed.
+
+\subsection{Technical Debt Summary}
+\begin{table}[H]
+\centering
+\begin{tabular}{lll}
+\toprule
+\textbf{Item} & \textbf{Priority} & \textbf{Impact} \\
+\midrule
+Automated ref pruning & High & Reduces repo bloat \\
+Retry logic for CAS conflicts & Medium & Improves concurrent editing \\
+External index for large ref counts & Medium & Improves \texttt{listArticles} performance \\
+\bottomrule
+\end{tabular}
+\end{table}

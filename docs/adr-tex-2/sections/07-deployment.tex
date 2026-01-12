@@ -1,0 +1,58 @@
+\section{Deployment View}
+
+\subsection{Topology 1: Single-Author Local Blog}
+
+\begin{figure}[H]
+\centering
+\resizebox{\textwidth}{!}{
+\begin{tikzpicture}
+    \node [block] (CLI) {git-cms CLI\\(Node.js)};
+    \node [block, right=2cm of CLI] (Repo) {Local Repo\\(\.git/objects)};
+    \draw [line] (CLI) -- node [above, scale=0.8] {I/O} (Repo);
+    \node [draw, dashed, thick, inner sep=15pt, fit=(CLI) (Repo)] (Box) {};
+    \node [anchor=south, font=\bfseries] at (Box.north) {Author's Laptop};
+\end{tikzpicture}
+}
+\caption{Local deployment topology.}
+\end{figure}
+
+\subsection{Topology 2: Team Blog with Stargate Gateway}
+
+\begin{figure}[H]
+\centering
+\resizebox{\textwidth}{!}{
+\begin{tikzpicture}[node distance=2.5cm]
+    \node [block] (CMS_A) {git-cms CLI};
+    \node [block, below of=CMS_A] (CMS_B) {git-cms CLI};
+    \node [block, right=3cm of CMS_A, yshift=-1.25cm] (Stargate) {\textbf{git-stargate}\\(Bare Repo + Hooks)};
+    \node [block, right=2.5cm of Stargate] (GitHub) {GitHub\\(Mirror)};
+
+    \draw [line] (CMS_A) -- node [above, sloped, scale=0.7] {git push (SSH)} (Stargate);
+    \draw [line] (CMS_B) -- node [below, sloped, scale=0.7] {git push (SSH)} (Stargate);
+    \draw [line] (Stargate) -- node [above, scale=0.7] {mirror} (GitHub);
+\end{tikzpicture}
+}
+\caption{Collaborative deployment topology using a central gateway.}
+\end{figure}
+
+\subsection{Topology 3: Dockerized Development}
+
+\begin{figure}[H]
+\centering
+\resizebox{\textwidth}{!}{
+\begin{tikzpicture}[node distance=1.5cm]
+    \node [block] (Node) {HTTP Server\\Node.js};
+    \node [block, below=of Node] (Git) {Git CLI};
+    \node [block, below=of Git] (Repo) {\.git/objects};
+    
+    \node [draw, dashed, thick, inner sep=10pt, fit=(Node) (Git) (Repo)] (Cont) {};
+    \node [anchor=east, font=\bfseries] at (Cont.west) {Docker Container};
+    
+    \node [block, left=2cm of Node] (Browser) {Web Browser};
+    \draw [line] (Browser) -- node [above, scale=0.7] {HTTP:4638} (Node);
+    \draw [line] (Node) -- (Git);
+    \draw [line] (Git) -- (Repo);
+\end{tikzpicture}
+}
+\caption{Dockerized development topology.}
+\end{figure}

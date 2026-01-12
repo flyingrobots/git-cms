@@ -1,0 +1,17 @@
+\section{Appendix B: Directory Structure}
+
+\begin{lstlisting}
+git-cms/
++-- bin/
+|   +-- git-cms.js              # CLI entry point
++-- src/
+|   +-- lib/
+|   |   +-- CmsService.js       # Core orchestrator
+|   +-- server/
+|       +-- index.js            # HTTP API server
++-- test/
+|   +-- git.test.js             # Integration tests
+|   +-- e2e/                    # Playwright tests
++-- public/                     # Static admin UI
++-- docs/                       # Documentation
+\end{lstlisting}
