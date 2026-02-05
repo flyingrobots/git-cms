@@ -1,9 +1,8 @@
 import GitPlumbing from '@git-stunts/plumbing';
-import EmptyGraph from '@git-stunts/empty-graph';
-import TrailerCodec from '@git-stunts/trailer-codec';
+import { createMessageHelpers } from '@git-stunts/trailer-codec';
 import ContentAddressableStore from '@git-stunts/cas';
 import Vault from '@git-stunts/vault';
-import ShellRunner from '@git-stunts/plumbing/ShellRunner.js';
+import ShellRunner from '@git-stunts/plumbing/ShellRunner';
 
 /**
  * @typedef {Object} CmsServiceOptions
@@ -28,8 +27,7 @@ export default class CmsService {
       cwd
     });
     
-    this.graph = new EmptyGraph({ plumbing: this.plumbing });
-    this.codec = new TrailerCodec();
+    this.codec = createMessageHelpers();
     this.cas = new ContentAddressableStore({ plumbing: this.plumbing });
     this.vault = new Vault();
   }
@@ -40,6 +38,51 @@ export default class CmsService {
    */
   _refFor(slug, kind = 'articles') {
     return `${this.refPrefix}/${kind}/${slug}`;
+  }
+
+  /**
+   * Resolve a ref to its SHA (returns null if ref doesn't exist).
+   * @private
+   */
+  async _revParse(revision) {
+    try {
+      const out = await this.plumbing.execute({ args: ['rev-parse', '--verify', revision] });
+      return out.trim() || null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Update (or create) a ref to point at a new SHA.
+   * @private
+   */
+  async _updateRef(ref, newSha, oldSha) {
+    if (oldSha) {
+      await this.plumbing.execute({ args: ['update-ref', ref, newSha, oldSha] });
+    } else {
+      await this.plumbing.execute({ args: ['update-ref', ref, newSha] });
+    }
+  }
+
+  /**
+   * Create an empty-tree commit with a message and optional parents.
+   * @private
+   */
+  async _createCommit({ message, parents = [] }) {
+    const emptyTree = (await this.plumbing.execute({ args: ['hash-object', '-t', 'tree', '/dev/null'] })).trim();
+    const parentArgs = parents.flatMap(p => ['-p', p]);
+    const sha = (await this.plumbing.execute({ args: ['commit-tree', emptyTree, ...parentArgs], input: message })).trim();
+    return sha;
+  }
+
+  /**
+   * Read the full commit message for a given SHA.
+   * @private
+   */
+  async _readCommitMessage(sha) {
+    const msg = await this.plumbing.execute({ args: ['log', '-1', '--format=%B', sha] });
+    return msg.trimEnd();
   }
 
   /**
@@ -69,11 +112,11 @@ export default class CmsService {
    */
   async readArticle({ slug, kind = 'articles' }) {
     const ref = this._refFor(slug, kind);
-    const sha = await this.plumbing.revParse({ revision: ref });
+    const sha = await this._revParse(ref);
     if (!sha) throw new Error(`Article not found: ${slug} (${kind})`);
     
-    const message = await this.graph.readNode({ sha });
-    return { sha, ...this.codec.decode({ message }) };
+    const message = await this._readCommitMessage(sha);
+    return { sha, ...this.codec.decodeMessage(message) };
   }
 
   /**
@@ -81,18 +124,17 @@ export default class CmsService {
    */
   async saveSnapshot({ slug, title, body, trailers = {} }) {
     const ref = this._refFor(slug, 'articles');
-    const parentSha = await this.plumbing.revParse({ revision: ref });
+    const parentSha = await this._revParse(ref);
     
     const finalTrailers = { ...trailers, status: 'draft', updatedAt: new Date().toISOString() };
-    const message = this.codec.encode({ title, body, trailers: finalTrailers });
+    const message = this.codec.encodeMessage({ title, body, trailers: finalTrailers });
     
-    const newSha = await this.graph.createNode({
+    const newSha = await this._createCommit({
       message,
       parents: parentSha ? [parentSha] : [],
-      sign: process.env.CMS_SIGN === '1'
     });
 
-    await this.plumbing.updateRef({ ref, newSha, oldSha: parentSha });
+    await this._updateRef(ref, newSha, parentSha);
     return { ref, sha: newSha, parent: parentSha };
   }
 
@@ -103,11 +145,11 @@ export default class CmsService {
     const draftRef = this._refFor(slug, 'articles');
     const pubRef = this._refFor(slug, 'published');
     
-    const targetSha = sha || await this.plumbing.revParse({ revision: draftRef });
+    const targetSha = sha || await this._revParse(draftRef);
     if (!targetSha) throw new Error(`Nothing to publish for ${slug}`);
 
-    const oldSha = await this.plumbing.revParse({ revision: pubRef });
-    await this.plumbing.updateRef({ ref: pubRef, newSha: targetSha, oldSha });
+    const oldSha = await this._revParse(pubRef);
+    await this._updateRef(pubRef, targetSha, oldSha);
     
     return { ref: pubRef, sha: targetSha, prev: oldSha };
   }
@@ -134,11 +176,11 @@ export default class CmsService {
     const treeOid = await this.cas.createTree({ manifest });
     
     const ref = `refs/_blog/chunks/${slug}@current`;
-    const commitSha = await this.graph.createNode({
+    const commitSha = await this._createCommit({
       message: `asset:${filename}\n\nmanifest: ${treeOid}`,
     });
 
-    await this.plumbing.updateRef({ ref, newSha: commitSha });
+    await this._updateRef(ref, commitSha);
     
     return { manifest, treeOid, commitSha };
   }
