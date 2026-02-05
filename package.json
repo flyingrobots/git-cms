@@ -24,7 +24,9 @@
     "url": "git+https://github.com/flyingrobots/git-cms.git"
   },
   "dependencies": {
+    "@git-stunts/alfred": "^0.10.0",
     "@git-stunts/cas": "file:../git-stunts/cas",
+    "@git-stunts/docker-guard": "^0.1.0",
     "@git-stunts/empty-graph": "file:../git-stunts/empty-graph",
     "@git-stunts/plumbing": "file:../git-stunts/plumbing",
     "@git-stunts/trailer-codec": "file:../git-stunts/trailer-codec",

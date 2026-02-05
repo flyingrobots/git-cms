@@ -77,25 +77,30 @@ async function handler(req, res) {
       // GET /api/cms/list?kind=articles|published|comments
       if (req.method === 'GET' && pathname === '/api/cms/list') {
         const kind = query.kind || 'articles';
-        return send(res, 200, cms.listArticles({ kind }));
+        return send(res, 200, await cms.listArticles({ kind }));
       }
 
       // GET /api/cms/show?slug=xxx&kind=articles
       if (req.method === 'GET' && pathname === '/api/cms/show') {
         const { slug, kind } = query;
         if (!slug) return send(res, 400, { error: 'slug required' });
-        return send(res, 200, cms.readArticle({ slug, kind: kind || 'articles' }));
+        return send(res, 200, await cms.readArticle({ slug, kind: kind || 'articles' }));
       }
 
       // POST /api/cms/snapshot
       if (req.method === 'POST' && pathname === '/api/cms/snapshot') {
         let body = '';
         req.on('data', (c) => (body += c));
-        req.on('end', () => {
-          const { slug, title, body: content, trailers } = JSON.parse(body || '{}');
-          if (!slug || !title) return send(res, 400, { error: 'slug and title required' });
-          const result = cms.saveSnapshot({ slug, title, body: content, trailers });
-          return send(res, 200, result);
+        req.on('end', async () => {
+          try {
+            const { slug, title, body: content, trailers } = JSON.parse(body || '{}');
+            if (!slug || !title) return send(res, 400, { error: 'slug and title required' });
+            const result = await cms.saveSnapshot({ slug, title, body: content, trailers });
+            return send(res, 200, result);
+          } catch (err) {
+            console.error(err);
+            return send(res, 500, { error: err.message });
+          }
         });
         return;
       }
@@ -104,11 +109,16 @@ async function handler(req, res) {
       if (req.method === 'POST' && pathname === '/api/cms/publish') {
         let body = '';
         req.on('data', (c) => (body += c));
-        req.on('end', () => {
-          const { slug, sha } = JSON.parse(body || '{}');
-          if (!slug) return send(res, 400, { error: 'slug required' });
-          const result = cms.publishArticle({ slug, sha });
-          return send(res, 200, result);
+        req.on('end', async () => {
+          try {
+            const { slug, sha } = JSON.parse(body || '{}');
+            if (!slug) return send(res, 400, { error: 'slug required' });
+            const result = await cms.publishArticle({ slug, sha });
+            return send(res, 200, result);
+          } catch (err) {
+            console.error(err);
+            return send(res, 500, { error: err.message });
+          }
         });
         return;
       }

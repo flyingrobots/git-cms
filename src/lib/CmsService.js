@@ -1,9 +1,9 @@
 import GitPlumbing from '@git-stunts/plumbing';
 import EmptyGraph from '@git-stunts/empty-graph';
-import TrailerCodec from '@git-stunts/trailer-codec';
+import { createMessageHelpers } from '@git-stunts/trailer-codec';
 import ContentAddressableStore from '@git-stunts/cas';
 import Vault from '@git-stunts/vault';
-import ShellRunner from '@git-stunts/plumbing/ShellRunner.js';
+import ShellRunner from '@git-stunts/plumbing/ShellRunner';
 
 /**
  * @typedef {Object} CmsServiceOptions
@@ -29,7 +29,8 @@ export default class CmsService {
     });
     
     this.graph = new EmptyGraph({ plumbing: this.plumbing });
-    this.codec = new TrailerCodec();
+    const helpers = createMessageHelpers();
+    this.codec = { decode: helpers.decodeMessage, encode: helpers.encodeMessage };
     this.cas = new ContentAddressableStore({ plumbing: this.plumbing });
     this.vault = new Vault();
   }
