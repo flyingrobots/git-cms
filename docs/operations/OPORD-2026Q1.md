@@ -11,7 +11,7 @@ UNCLASSIFIED
 | OPORD | Codename | Primary Objective | Roadmap Alignment | Status |
 |---|---|---|---|---|
 | OPORD-01 | CLEAN-LIFT | Complete reproducible packaging/install baseline | PP3, PP4 precondition | Executed (2026-02-11) |
-| OPORD-02 | SLUG-LAW | Define and enforce canonical Content ID + slug policy | M1.1 | Planned |
+| OPORD-02 | SLUG-LAW | Define and enforce canonical Content ID + slug policy | M1.1 | Executed (2026-02-11, baseline) |
 | OPORD-03 | STATE-RAIL | Implement explicit content state machine and transitions | M1.2, PD1 | Planned |
 | OPORD-04 | RESILIENT-EDGE | Add retry/resilience policy to write paths | INF2 | Planned |
 
@@ -114,6 +114,23 @@ Go Criteria:
 
 No-Go Criteria:
 - Different behavior between CLI and API validation outcomes.
+
+### 6. Execution Status (2026-02-11)
+
+- Added canonical policy module: `src/lib/ContentIdentityPolicy.js`.
+- Enforced policy in:
+  - CLI ingress: `bin/git-cms.js`
+  - API ingress: `src/server/index.js`
+  - Service layer: `src/lib/CmsService.js`
+- Added formal policy spec: `docs/CONTENT_ID_POLICY.md`.
+- Added/updated validation tests:
+  - `test/git.test.js`
+  - `test/server.test.js`
+- Validation completed:
+  - `npm run check:deps` passed
+  - `npm run test:setup` passed
+  - `npm run test:local` passed
+  - `npm test` passed
 
 ## OPORD-03: STATE-RAIL (M1.2)
 
