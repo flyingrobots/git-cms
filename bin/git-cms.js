@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import CmsService from '../src/lib/CmsService.js';
+import { canonicalizeSlug } from '../src/lib/ContentIdentityPolicy.js';
 
 async function main() {
   const [,, cmd, ...args] = process.argv;
@@ -12,8 +13,9 @@ async function main() {
   try {
     switch (cmd) {
       case 'draft': {
-        const [slug, title] = args;
-        if (!slug || !title) throw new Error('Usage: git cms draft <slug> "Title" < content.md');
+        const [rawSlug, title] = args;
+        if (!rawSlug || !title) throw new Error('Usage: git cms draft <slug> "Title" < content.md');
+        const slug = canonicalizeSlug(rawSlug);
         
         const chunks = [];
         for await (const chunk of process.stdin) chunks.push(chunk);
@@ -24,8 +26,9 @@ async function main() {
         break;
       }
       case 'publish': {
-        const [slug] = args;
-        if (!slug) throw new Error('Usage: git cms publish <slug>');
+        const [rawSlug] = args;
+        if (!rawSlug) throw new Error('Usage: git cms publish <slug>');
+        const slug = canonicalizeSlug(rawSlug);
         
         const res = await cms.publishArticle({ slug });
         console.log(`Published: ${res.sha} (${res.ref})`);
@@ -38,8 +41,9 @@ async function main() {
         break;
       }
       case 'show': {
-        const [slug] = args;
-        if (!slug) throw new Error('Usage: git cms show <slug>');
+        const [rawSlug] = args;
+        if (!rawSlug) throw new Error('Usage: git cms show <slug>');
+        const slug = canonicalizeSlug(rawSlug);
         const article = await cms.readArticle({ slug });
         console.log(`# ${article.title}\n\n${article.body}`);
         break;

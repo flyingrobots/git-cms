@@ -57,4 +57,37 @@ describe('Server API (Integration)', () => {
     expect(res.status).toBe(200);
     expect(data.sha).toBeDefined();
   });
+
+  it('rejects invalid slugs with 400', async () => {
+    const res = await fetch(`${baseUrl}/api/cms/snapshot`, {
+      method: 'POST',
+      body: JSON.stringify({
+        slug: 'bad slug',
+        title: 'Nope',
+        body: 'Body',
+      }),
+    });
+    const data = await res.json();
+    expect(res.status).toBe(400);
+    expect(data.code).toBe('slug_invalid_format');
+    expect(data.field).toBe('slug');
+  });
+
+  it('canonicalizes mixed-case slugs across API ingress', async () => {
+    const createRes = await fetch(`${baseUrl}/api/cms/snapshot`, {
+      method: 'POST',
+      body: JSON.stringify({
+        slug: 'Api-Mixed',
+        title: 'API Canonical',
+        body: 'Body',
+      }),
+    });
+    expect(createRes.status).toBe(200);
+
+    const readRes = await fetch(`${baseUrl}/api/cms/show?slug=api-mixed`);
+    const article = await readRes.json();
+    expect(readRes.status).toBe(200);
+    expect(article.title).toBe('API Canonical');
+    expect(article.trailers.contentid).toBe('api-mixed');
+  });
 });

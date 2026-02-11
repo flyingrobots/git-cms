@@ -4,6 +4,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import CmsService from '../lib/CmsService.js';
+import {
+  CmsValidationError,
+  canonicalizeKind,
+  canonicalizeSlug,
+} from '../lib/ContentIdentityPolicy.js';
 
 const __dirname = path.dirname(new URL(import.meta.url).pathname);
 const PORT = process.env.PORT || 4638;
@@ -57,6 +62,23 @@ function send(res, status, payload) {
   res.end(body);
 }
 
+function sendError(res, err) {
+  if (err instanceof CmsValidationError) {
+    return send(res, 400, {
+      error: err.message,
+      code: err.code,
+      field: err.field,
+    });
+  }
+  return send(res, 500, { error: err.message });
+}
+
+function logError(err) {
+  if (!(err instanceof CmsValidationError)) {
+    console.error(err);
+  }
+}
+
 async function handler(req, res) {
   const parsed = url.parse(req.url, true);
   const { pathname, query } = parsed;
@@ -76,15 +98,17 @@ async function handler(req, res) {
     if (pathname.startsWith('/api/cms')) {
       // GET /api/cms/list?kind=articles|published|comments
       if (req.method === 'GET' && pathname === '/api/cms/list') {
-        const kind = query.kind || 'articles';
+        const kind = canonicalizeKind(query.kind || 'articles');
         return send(res, 200, await cms.listArticles({ kind }));
       }
 
       // GET /api/cms/show?slug=xxx&kind=articles
       if (req.method === 'GET' && pathname === '/api/cms/show') {
-        const { slug, kind } = query;
-        if (!slug) return send(res, 400, { error: 'slug required' });
-        return send(res, 200, await cms.readArticle({ slug, kind: kind || 'articles' }));
+        const { slug: rawSlug, kind } = query;
+        if (!rawSlug) return send(res, 400, { error: 'slug required' });
+        const slug = canonicalizeSlug(rawSlug);
+        const canonicalKind = canonicalizeKind(kind || 'articles');
+        return send(res, 200, await cms.readArticle({ slug, kind: canonicalKind }));
       }
 
       // POST /api/cms/snapshot
@@ -93,13 +117,14 @@ async function handler(req, res) {
         req.on('data', (c) => (body += c));
         req.on('end', async () => {
           try {
-            const { slug, title, body: content, trailers } = JSON.parse(body || '{}');
-            if (!slug || !title) return send(res, 400, { error: 'slug and title required' });
+            const { slug: rawSlug, title, body: content, trailers } = JSON.parse(body || '{}');
+            if (!rawSlug || !title) return send(res, 400, { error: 'slug and title required' });
+            const slug = canonicalizeSlug(rawSlug);
             const result = await cms.saveSnapshot({ slug, title, body: content, trailers });
             return send(res, 200, result);
           } catch (err) {
-            console.error(err);
-            return send(res, 500, { error: err.message });
+            logError(err);
+            return sendError(res, err);
           }
         });
         return;
@@ -111,13 +136,14 @@ async function handler(req, res) {
         req.on('data', (c) => (body += c));
         req.on('end', async () => {
           try {
-            const { slug, sha } = JSON.parse(body || '{}');
-            if (!slug) return send(res, 400, { error: 'slug required' });
+            const { slug: rawSlug, sha } = JSON.parse(body || '{}');
+            if (!rawSlug) return send(res, 400, { error: 'slug required' });
+            const slug = canonicalizeSlug(rawSlug);
             const result = await cms.publishArticle({ slug, sha });
             return send(res, 200, result);
           } catch (err) {
-            console.error(err);
-            return send(res, 500, { error: err.message });
+            logError(err);
+            return sendError(res, err);
           }
         });
         return;
@@ -129,8 +155,9 @@ async function handler(req, res) {
         req.on('data', (c) => (body += c));
         req.on('end', async () => {
           try {
-            const { slug, filename, data } = JSON.parse(body || '{}');
-            if (!slug || !filename || !data) return send(res, 400, { error: 'slug, filename, data required' });
+            const { slug: rawSlug, filename, data } = JSON.parse(body || '{}');
+            if (!rawSlug || !filename || !data) return send(res, 400, { error: 'slug, filename, data required' });
+            const slug = canonicalizeSlug(rawSlug);
             
             const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cms-upload-'));
             const filePath = path.join(tmpDir, filename);
@@ -142,8 +169,8 @@ async function handler(req, res) {
             fs.rmSync(tmpDir, { recursive: true, force: true });
             return send(res, 200, { ...result, assetUrl });
           } catch (err) {
-            console.error(err);
-            return send(res, 500, { error: err.message });
+            logError(err);
+            return sendError(res, err);
           }
         });
         return;
@@ -155,8 +182,8 @@ async function handler(req, res) {
     if (serveStatic(req, res)) return;
     send(res, 404, { error: 'Not found' });
   } catch (err) {
-    console.error(err);
-    send(res, 500, { error: err.message });
+    logError(err);
+    sendError(res, err);
   }
 }
 

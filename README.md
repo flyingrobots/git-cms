@@ -43,7 +43,7 @@ npm run dev
 
 The tests create, destroy, and manipulate Git repositories. Running low-level plumbing commands on your host filesystem is risky - a typo could affect your local Git setup. That's why we built Docker isolation into everything.
 
-**Read more:** [TESTING_GUIDE.md](./TESTING_GUIDE.md) | [docs/GETTING_STARTED.md](./docs/GETTING_STARTED.md)
+**Read more:** [TESTING_GUIDE.md](./TESTING_GUIDE.md) | [docs/GETTING_STARTED.md](./docs/GETTING_STARTED.md) | [docs/CONTENT_ID_POLICY.md](./docs/CONTENT_ID_POLICY.md)
 
 ## Features
 

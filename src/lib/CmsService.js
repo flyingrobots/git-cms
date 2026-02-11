@@ -4,6 +4,11 @@ import { createMessageHelpers } from '@git-stunts/trailer-codec';
 import ContentAddressableStore from '@git-stunts/git-cas';
 import VaultResolver from './VaultResolver.js';
 import ShellRunner from '@git-stunts/plumbing/ShellRunner';
+import {
+  canonicalizeKind,
+  canonicalizeSlug,
+  resolveContentIdentity,
+} from './ContentIdentityPolicy.js';
 
 /**
  * @typedef {Object} CmsServiceOptions
@@ -43,14 +48,17 @@ export default class CmsService {
    * @private
    */
   _refFor(slug, kind = 'articles') {
-    return `${this.refPrefix}/${kind}/${slug}`;
+    const canonicalSlug = canonicalizeSlug(slug);
+    const canonicalKind = canonicalizeKind(kind);
+    return `${this.refPrefix}/${canonicalKind}/${canonicalSlug}`;
   }
 
   /**
    * Lists all articles of a certain kind.
    */
   async listArticles({ kind = 'articles' } = {}) {
-    const ns = `${this.refPrefix}/${kind}/`;
+    const canonicalKind = canonicalizeKind(kind);
+    const ns = `${this.refPrefix}/${canonicalKind}/`;
     let out = '';
     try {
       out = await this.plumbing.execute({ args: ['for-each-ref', ns, '--format=%(refname) %(objectname)'] });
@@ -84,10 +92,17 @@ export default class CmsService {
    * Saves a new version (snapshot) of an article.
    */
   async saveSnapshot({ slug, title, body, trailers = {} }) {
-    const ref = this._refFor(slug, 'articles');
+    const safeTrailers = trailers && typeof trailers === 'object' ? trailers : {};
+    const identity = resolveContentIdentity({ slug, trailers: safeTrailers });
+    const ref = this._refFor(identity.slug, 'articles');
     const parentSha = await this.graph.readRef(ref);
     
-    const finalTrailers = { ...trailers, status: 'draft', updatedAt: new Date().toISOString() };
+    const finalTrailers = {
+      ...safeTrailers,
+      contentid: identity.contentId,
+      status: 'draft',
+      updatedAt: new Date().toISOString(),
+    };
     const message = this.codec.encode({ title, body, trailers: finalTrailers });
     
     const newSha = await this.graph.commitNode({
@@ -104,11 +119,12 @@ export default class CmsService {
    * Publishes an article by fast-forwarding the 'published' ref.
    */
   async publishArticle({ slug, sha }) {
-    const draftRef = this._refFor(slug, 'articles');
-    const pubRef = this._refFor(slug, 'published');
+    const canonicalSlug = canonicalizeSlug(slug);
+    const draftRef = this._refFor(canonicalSlug, 'articles');
+    const pubRef = this._refFor(canonicalSlug, 'published');
     
     const targetSha = sha || await this.graph.readRef(draftRef);
-    if (!targetSha) throw new Error(`Nothing to publish for ${slug}`);
+    if (!targetSha) throw new Error(`Nothing to publish for ${canonicalSlug}`);
 
     const oldSha = await this.graph.readRef(pubRef);
     await this.repo.updateRef({ ref: pubRef, newSha: targetSha, oldSha });
@@ -120,6 +136,7 @@ export default class CmsService {
    * Uploads an asset and returns its manifest and CAS info.
    */
   async uploadAsset({ slug, filePath, filename }) {
+    const canonicalSlug = canonicalizeSlug(slug);
     const ENV = (process.env.GIT_CMS_ENV || 'dev').toLowerCase();
     const encryptionKeyRaw = await this.vault.resolveSecret({
       envKey: 'CHUNK_ENC_KEY',
@@ -130,14 +147,14 @@ export default class CmsService {
 
     const manifest = await this.cas.storeFile({
       filePath,
-      slug,
+      slug: canonicalSlug,
       filename,
       encryptionKey
     });
 
     const treeOid = await this.cas.createTree({ manifest });
     
-    const ref = `refs/_blog/chunks/${slug}@current`;
+    const ref = `refs/_blog/chunks/${canonicalSlug}@current`;
     const commitSha = await this.graph.commitNode({
       message: `asset:${filename}\n\nmanifest: ${treeOid}`,
     });

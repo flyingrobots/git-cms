@@ -68,4 +68,34 @@ describe('CmsService (Integration)', () => {
     const pubArticle = await cms.readArticle({ slug, kind: 'published' });
     expect(pubArticle.sha).toBe(sha);
   });
+
+  it('canonicalizes mixed-case slugs and stores contentId trailer', async () => {
+    await cms.saveSnapshot({ slug: 'Hello-World', title: 'Title', body: 'Body' });
+
+    const article = await cms.readArticle({ slug: 'hello-world' });
+    expect(article.trailers.contentid).toBe('hello-world');
+  });
+
+  it('rejects invalid slug format', async () => {
+    await expect(
+      cms.saveSnapshot({ slug: 'bad slug', title: 'Title', body: 'Body' })
+    ).rejects.toThrow(/slug must match/);
+  });
+
+  it('rejects reserved slug names', async () => {
+    await expect(
+      cms.saveSnapshot({ slug: 'api', title: 'Title', body: 'Body' })
+    ).rejects.toThrow(/slug "api" is reserved/);
+  });
+
+  it('rejects mismatched contentId trailers', async () => {
+    await expect(
+      cms.saveSnapshot({
+        slug: 'policy-test',
+        title: 'Title',
+        body: 'Body',
+        trailers: { contentId: 'another-id' },
+      })
+    ).rejects.toThrow(/must match canonical slug/);
+  });
 });
