@@ -5,9 +5,9 @@
     \node [draw, dashed, thick, inner sep=10pt, fit=(CLI) (HTTP) (CMS)] (AppLayer) {};
     \node [anchor=south] at (AppLayer.north) {\small\textbf{Application Layer}};
 
-    \node [block, below=1.5cm of CMS] (Graph) {Graph\\empty-graph};
+    \node [block, below=1.5cm of CMS] (Graph) {Graph\\git-warp};
     \node [block, left=0.5cm of Graph] (Codec) {Codec\\trailer-codec};
-    \node [block, right=0.5cm of Graph] (CAS) {CAS\\cas};
+    \node [block, right=0.5cm of Graph] (CAS) {CAS\\git-cas};
     \node [block, below=1cm of Graph] (Plumbing) {Plumbing\\git-protocol};
     \node [block, right=0.5cm of CAS] (Vault) {Vault\\secrets};
     \node [draw, dashed, thick, inner sep=10pt, fit=(Plumbing) (Codec) (Graph) (CAS) (Vault)] (LegoLayer) {};

@@ -1,8 +1,8 @@
-import GitPlumbing from '@git-stunts/plumbing';
-import EmptyGraph from '@git-stunts/empty-graph';
+import GitPlumbing, { GitRepositoryService } from '@git-stunts/plumbing';
+import { GitGraphAdapter } from '@git-stunts/git-warp';
 import { createMessageHelpers } from '@git-stunts/trailer-codec';
-import ContentAddressableStore from '@git-stunts/cas';
-import Vault from '@git-stunts/vault';
+import ContentAddressableStore from '@git-stunts/git-cas';
+import VaultResolver from './VaultResolver.js';
 import ShellRunner from '@git-stunts/plumbing/ShellRunner';
 
 /**
@@ -27,12 +27,15 @@ export default class CmsService {
       runner: ShellRunner.run,
       cwd
     });
+    this.repo = new GitRepositoryService({ plumbing: this.plumbing });
     
-    this.graph = new EmptyGraph({ plumbing: this.plumbing });
-    const helpers = createMessageHelpers();
+    this.graph = new GitGraphAdapter({ plumbing: this.plumbing });
+    const helpers = createMessageHelpers({
+      bodyFormatOptions: { keepTrailingNewline: true }
+    });
     this.codec = { decode: helpers.decodeMessage, encode: helpers.encodeMessage };
     this.cas = new ContentAddressableStore({ plumbing: this.plumbing });
-    this.vault = new Vault();
+    this.vault = new VaultResolver();
   }
 
   /**
@@ -70,11 +73,11 @@ export default class CmsService {
    */
   async readArticle({ slug, kind = 'articles' }) {
     const ref = this._refFor(slug, kind);
-    const sha = await this.plumbing.revParse({ revision: ref });
+    const sha = await this.graph.readRef(ref);
     if (!sha) throw new Error(`Article not found: ${slug} (${kind})`);
     
-    const message = await this.graph.readNode({ sha });
-    return { sha, ...this.codec.decode({ message }) };
+    const message = await this.graph.showNode(sha);
+    return { sha, ...this.codec.decode(message) };
   }
 
   /**
@@ -82,18 +85,18 @@ export default class CmsService {
    */
   async saveSnapshot({ slug, title, body, trailers = {} }) {
     const ref = this._refFor(slug, 'articles');
-    const parentSha = await this.plumbing.revParse({ revision: ref });
+    const parentSha = await this.graph.readRef(ref);
     
     const finalTrailers = { ...trailers, status: 'draft', updatedAt: new Date().toISOString() };
     const message = this.codec.encode({ title, body, trailers: finalTrailers });
     
-    const newSha = await this.graph.createNode({
+    const newSha = await this.graph.commitNode({
       message,
       parents: parentSha ? [parentSha] : [],
       sign: process.env.CMS_SIGN === '1'
     });
 
-    await this.plumbing.updateRef({ ref, newSha, oldSha: parentSha });
+    await this.repo.updateRef({ ref, newSha, oldSha: parentSha });
     return { ref, sha: newSha, parent: parentSha };
   }
 
@@ -104,11 +107,11 @@ export default class CmsService {
     const draftRef = this._refFor(slug, 'articles');
     const pubRef = this._refFor(slug, 'published');
     
-    const targetSha = sha || await this.plumbing.revParse({ revision: draftRef });
+    const targetSha = sha || await this.graph.readRef(draftRef);
     if (!targetSha) throw new Error(`Nothing to publish for ${slug}`);
 
-    const oldSha = await this.plumbing.revParse({ revision: pubRef });
-    await this.plumbing.updateRef({ ref: pubRef, newSha: targetSha, oldSha });
+    const oldSha = await this.graph.readRef(pubRef);
+    await this.repo.updateRef({ ref: pubRef, newSha: targetSha, oldSha });
     
     return { ref: pubRef, sha: targetSha, prev: oldSha };
   }
@@ -118,7 +121,7 @@ export default class CmsService {
    */
   async uploadAsset({ slug, filePath, filename }) {
     const ENV = (process.env.GIT_CMS_ENV || 'dev').toLowerCase();
-    const encryptionKeyRaw = this.vault.resolveSecret({
+    const encryptionKeyRaw = await this.vault.resolveSecret({
       envKey: 'CHUNK_ENC_KEY',
       vaultTarget: `git-cms-${ENV}-enc-key`
     });
@@ -135,11 +138,11 @@ export default class CmsService {
     const treeOid = await this.cas.createTree({ manifest });
     
     const ref = `refs/_blog/chunks/${slug}@current`;
-    const commitSha = await this.graph.createNode({
+    const commitSha = await this.graph.commitNode({
       message: `asset:${filename}\n\nmanifest: ${treeOid}`,
     });
 
-    await this.plumbing.updateRef({ ref, newSha: commitSha });
+    await this.repo.updateRef({ ref, newSha: commitSha });
     
     return { manifest, treeOid, commitSha };
   }

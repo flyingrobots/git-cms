@@ -284,8 +284,8 @@ graph TD
     subgraph "Lego Blocks (@git-stunts)"
         Plumbing[@git-stunts/plumbing<br/>Git Protocol Wrapper]
         Codec[@git-stunts/trailer-codec<br/>RFC 822 Parser]
-        Graph[@git-stunts/empty-graph<br/>Graph DB Primitive]
-        CAS[@git-stunts/cas<br/>Content Store]
+        Graph[@git-stunts/git-warp<br/>Graph DB Primitive]
+        CAS[@git-stunts/git-cas<br/>Content Store]
         Vault[@git-stunts/vault<br/>Secret Management]
     end
 
@@ -317,9 +317,8 @@ graph LR
 
     subgraph "@git-stunts/plumbing"
         PL_Exec[execute]
-        PL_Rev[revParse]
-        PL_Commit[createCommit]
-        PL_Ref[updateRef]
+        PL_Stream[executeStream]
+        PL_Repo[GitRepositoryService.updateRef]
     end
 
     subgraph "@git-stunts/trailer-codec"
@@ -327,12 +326,13 @@ graph LR
         TC_Decode[decode]
     end
 
-    subgraph "@git-stunts/empty-graph"
-        EG_Create[createNode]
-        EG_Read[readNode]
+    subgraph "@git-stunts/git-warp"
+        EG_Commit[commitNode]
+        EG_Show[showNode]
+        EG_ReadRef[readRef]
     end
 
-    subgraph "@git-stunts/cas"
+    subgraph "@git-stunts/git-cas"
         CAS_Store[storeFile]
         CAS_Tree[createTree]
         CAS_Retrieve[retrieveFile]
@@ -343,17 +343,18 @@ graph LR
     end
 
     CMS -->|uses| PL_Exec
-    CMS -->|uses| PL_Rev
-    CMS -->|uses| PL_Ref
+    CMS -->|uses| PL_Repo
     CMS -->|uses| TC_Encode
     CMS -->|uses| TC_Decode
-    CMS -->|uses| EG_Create
-    CMS -->|uses| EG_Read
+    CMS -->|uses| EG_Commit
+    CMS -->|uses| EG_Show
+    CMS -->|uses| EG_ReadRef
     CMS -->|uses| CAS_Store
     CMS -->|uses| V_Resolve
 
-    EG_Create -->|calls| PL_Commit
-    EG_Read -->|calls| PL_Exec
+    EG_Commit -->|calls| PL_Exec
+    EG_Show -->|calls| PL_Exec
+    EG_ReadRef -->|calls| PL_Exec
     CAS_Store -->|calls| PL_Exec
     CAS_Tree -->|calls| PL_Exec
 
@@ -362,16 +363,19 @@ graph LR
 
 ### Level 2: Lego Block Responsibilities
 
-#### Module 1: `@git-stunts/plumbing` (v2.7.0)
+#### Module 1: `@git-stunts/plumbing` (v2.8.0)
 **Purpose:** Low-level Git protocol implementation.
 
 **Public API:**
 ```javascript
 class GitPlumbing {
   async execute({ args }) // Run arbitrary Git command
+  async executeStream({ args, input }) // Stream-first command execution
+}
+
+class GitRepositoryService {
   async revParse({ revision }) // Resolve ref → SHA
-  async createCommit({ tree, parents, message, sign })
-  async updateRef({ ref, newSha, oldSha }) // Atomic CAS
+  async updateRef({ ref, newSha, oldSha }) // Atomic compare-and-swap
 }
 ```
 
@@ -384,14 +388,14 @@ class GitPlumbing {
 
 ---
 
-#### Module 2: `@git-stunts/trailer-codec` (v2.0.0)
+#### Module 2: `@git-stunts/trailer-codec` (v2.1.1)
 **Purpose:** Encode/decode RFC 822 trailers in commit messages.
 
 **Public API:**
 ```javascript
 class TrailerCodec {
   encode({ title, body, trailers }) // → message string
-  decode({ message }) // → { title, body, trailers }
+  decode(message) // → { title, body, trailers }
 }
 ```
 
@@ -414,27 +418,27 @@ Output:
 
 ---
 
-#### Module 3: `@git-stunts/empty-graph` (v1.0.0)
+#### Module 3: `@git-stunts/git-warp` (v10.4.2)
 **Purpose:** Graph database primitive using commits on empty trees.
 
 **Public API:**
 ```javascript
-class EmptyGraph {
-  async createNode({ message, parents, sign })
-  async readNode({ sha }) // Returns commit message
+class GitGraphAdapter {
+  async commitNode({ message, parents, sign })
+  async showNode(sha) // Returns commit message
+  async readRef(ref) // Resolve ref -> SHA or null
 }
 ```
 
 **Implementation:**
 ```javascript
-async createNode({ message, parents, sign }) {
-  const emptyTree = '4b825dc642cb6eb9a060e54bf8d69288fbee4904';
-  return this.plumbing.createCommit({
-    tree: emptyTree,
-    parents,
-    message,
-    sign
+async commitNode({ message, parents = [], sign = false }) {
+  const parentArgs = parents.flatMap((p) => ['-p', p]);
+  const signArgs = sign ? ['-S'] : [];
+  const oid = await this.plumbing.execute({
+    args: ['commit-tree', this.emptyTree, ...parentArgs, ...signArgs, '-m', message],
   });
+  return oid.trim();
 }
 ```
 
@@ -444,7 +448,7 @@ async createNode({ message, parents, sign }) {
 
 ---
 
-#### Module 4: `@git-stunts/cas` (v1.0.0)
+#### Module 4: `@git-stunts/git-cas` (v3.0.0)
 **Purpose:** Content-Addressable Store for large files.
 
 **Public API:**
@@ -506,8 +510,10 @@ class Vault {
 ```javascript
 constructor({ cwd, refPrefix }) {
   this.plumbing = new GitPlumbing({ runner: ShellRunner.run, cwd });
-  this.graph = new EmptyGraph({ plumbing: this.plumbing });
-  this.codec = new TrailerCodec();
+  this.repo = new GitRepositoryService({ plumbing: this.plumbing });
+  this.graph = new GitGraphAdapter({ plumbing: this.plumbing });
+  const helpers = createMessageHelpers({ bodyFormatOptions: { keepTrailingNewline: true } });
+  this.codec = { encode: helpers.encodeMessage, decode: helpers.decodeMessage };
   this.cas = new ContentAddressableStore({ plumbing: this.plumbing });
   this.vault = new Vault();
 }
@@ -525,10 +531,10 @@ async uploadAsset({ slug, filePath, filename })
 **Orchestration Example:**
 ```javascript
 // saveSnapshot() orchestrates:
-// 1. Resolve parent SHA (plumbing.revParse)
+// 1. Resolve parent SHA (graph.readRef)
 // 2. Encode message (codec.encode)
-// 3. Create commit (graph.createNode)
-// 4. Update ref (plumbing.updateRef)
+// 3. Create commit (graph.commitNode)
+// 4. Update ref (repo.updateRef)
 ```
 
 **Boundary:** Implements domain logic without knowing Git internals.
@@ -539,7 +545,7 @@ async uploadAsset({ slug, filePath, filename })
 
 ### Scenario 1: Create Draft Article
 
-**Actors:** Author (CLI), CmsService, GitPlumbing, EmptyGraph, TrailerCodec
+**Actors:** Author (CLI), CmsService, GitPlumbing, GitGraphAdapter, GitRepositoryService, TrailerCodec
 
 ```mermaid
 sequenceDiagram
@@ -547,32 +553,37 @@ sequenceDiagram
     participant CLI
     participant CmsService
     participant TrailerCodec
-    participant EmptyGraph
+    participant GitGraphAdapter
+    participant GitRepositoryService
     participant GitPlumbing
     participant Git
 
     Author->>CLI: echo "# Hello" | git cms draft hello-world "My First Post"
     CLI->>CmsService: saveSnapshot({ slug, title, body })
 
-    CmsService->>GitPlumbing: revParse('refs/_blog/articles/hello-world')
+    CmsService->>GitGraphAdapter: readRef('refs/_blog/articles/hello-world')
+    GitGraphAdapter->>GitPlumbing: execute(rev-parse refs/_blog/articles/hello-world)
     GitPlumbing->>Git: git rev-parse refs/_blog/articles/hello-world
     Git-->>GitPlumbing: <empty> (ref doesn't exist)
-    GitPlumbing-->>CmsService: null
+    GitPlumbing-->>GitGraphAdapter: <empty>
+    GitGraphAdapter-->>CmsService: null
 
     CmsService->>TrailerCodec: encode({ title, body, trailers })
     TrailerCodec-->>CmsService: "# My First Post\n\nHello\n\nStatus: draft"
 
-    CmsService->>EmptyGraph: createNode({ message, parents: [] })
-    EmptyGraph->>GitPlumbing: createCommit({ tree: '4b825dc...', message })
+    CmsService->>GitGraphAdapter: commitNode({ message, parents: [] })
+    GitGraphAdapter->>GitPlumbing: execute(commit-tree 4b825dc... -m ...)
     GitPlumbing->>Git: git commit-tree 4b825dc... -m "..."
     Git-->>GitPlumbing: abc123def... (commit SHA)
-    GitPlumbing-->>EmptyGraph: abc123def...
-    EmptyGraph-->>CmsService: abc123def...
+    GitPlumbing-->>GitGraphAdapter: abc123def...
+    GitGraphAdapter-->>CmsService: abc123def...
 
-    CmsService->>GitPlumbing: updateRef({ ref, newSha: 'abc123...', oldSha: null })
+    CmsService->>GitRepositoryService: updateRef({ ref, newSha: 'abc123...', oldSha: null })
+    GitRepositoryService->>GitPlumbing: execute(update-ref refs/_blog/articles/hello-world abc123...)
     GitPlumbing->>Git: git update-ref refs/_blog/articles/hello-world abc123...
     Git-->>GitPlumbing: OK
-    GitPlumbing-->>CmsService: OK
+    GitPlumbing-->>GitRepositoryService: OK
+    GitRepositoryService-->>CmsService: OK
 
     CmsService-->>CLI: { ref, sha: 'abc123...', parent: null }
     CLI-->>Author: "Draft saved: refs/_blog/articles/hello-world (abc123...)"
@@ -597,26 +608,34 @@ sequenceDiagram
     participant Author
     participant CLI
     participant CmsService
+    participant GitGraphAdapter
+    participant GitRepositoryService
     participant GitPlumbing
     participant Git
 
     Author->>CLI: git cms publish hello-world
     CLI->>CmsService: publishArticle({ slug: 'hello-world' })
 
-    CmsService->>GitPlumbing: revParse('refs/_blog/articles/hello-world')
+    CmsService->>GitGraphAdapter: readRef('refs/_blog/articles/hello-world')
+    GitGraphAdapter->>GitPlumbing: execute(rev-parse refs/_blog/articles/hello-world)
     GitPlumbing->>Git: git rev-parse refs/_blog/articles/hello-world
     Git-->>GitPlumbing: abc123def... (draft commit)
-    GitPlumbing-->>CmsService: abc123def...
+    GitPlumbing-->>GitGraphAdapter: abc123def...
+    GitGraphAdapter-->>CmsService: abc123def...
 
-    CmsService->>GitPlumbing: revParse('refs/_blog/published/hello-world')
+    CmsService->>GitGraphAdapter: readRef('refs/_blog/published/hello-world')
+    GitGraphAdapter->>GitPlumbing: execute(rev-parse refs/_blog/published/hello-world)
     GitPlumbing->>Git: git rev-parse refs/_blog/published/hello-world
     Git-->>GitPlumbing: <empty> (not published yet)
-    GitPlumbing-->>CmsService: null
+    GitPlumbing-->>GitGraphAdapter: <empty>
+    GitGraphAdapter-->>CmsService: null
 
-    CmsService->>GitPlumbing: updateRef({ ref: 'refs/_blog/published/hello-world', newSha: 'abc123...', oldSha: null })
+    CmsService->>GitRepositoryService: updateRef({ ref: 'refs/_blog/published/hello-world', newSha: 'abc123...', oldSha: null })
+    GitRepositoryService->>GitPlumbing: execute(update-ref refs/_blog/published/hello-world abc123... <null>)
     GitPlumbing->>Git: git update-ref refs/_blog/published/hello-world abc123... <null>
     Git-->>GitPlumbing: OK
-    GitPlumbing-->>CmsService: OK
+    GitPlumbing-->>GitRepositoryService: OK
+    GitRepositoryService-->>CmsService: OK
 
     CmsService-->>CLI: { ref, sha: 'abc123...', prev: null }
     CLI-->>Author: "Published: refs/_blog/published/hello-world"
@@ -878,8 +897,8 @@ graph TB
 ```mermaid
 graph TB
     subgraph "Dockerfile Build Stages"
-        Base[base<br/>node:20-slim + git]
-        Deps[deps<br/>npm ci + Lego Blocks]
+        Base[base<br/>node:22-slim + git + build deps]
+        Deps[deps<br/>npm ci from package-lock]
         Dev[dev<br/>Development Server]
         Test[test<br/>Test Runner]
 
@@ -905,20 +924,19 @@ graph TB
 ```
 
 ```dockerfile
-# Base: Node 20 + Git
-FROM node:20-slim AS base
-RUN apt-get update && apt-get install -y git
+# Base: Node 22 + Git + native build toolchain
+FROM node:22-slim AS base
+RUN apt-get update && apt-get install -y git python3 make g++
 
 # Deps: Install dependencies
 FROM base AS deps
-COPY ../git-stunts /git-stunts  # Lego Blocks
-COPY package.json ./
+COPY package.json package-lock.json* ./
 RUN npm ci
 
 # Dev: Development server
 FROM base AS dev
 ENV NODE_ENV=development
-COPY --from=deps /git-stunts /git-stunts
+COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN git config --global user.email "dev@git-cms.local"
 CMD ["npm", "run", "serve"]
@@ -926,7 +944,7 @@ CMD ["npm", "run", "serve"]
 # Test: Run tests in isolation
 FROM base AS test
 ENV NODE_ENV=test
-COPY --from=deps /git-stunts /git-stunts
+COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 CMD ["npm", "run", "test:local"]
 ```
@@ -1016,7 +1034,7 @@ If `expectedOldSHA` doesn't match, Git returns exit code 1.
 **Implementation:** `src/lib/CmsService.js:95`
 
 ```javascript
-await this.plumbing.updateRef({ ref, newSha, oldSha: parentSha });
+await this.repo.updateRef({ ref, newSha, oldSha: parentSha });
 ```
 
 **Concurrency Guarantee:** Atomic at the ref level (not across refs).
@@ -1077,7 +1095,7 @@ graph TB
 
 **Cryptographic Primitive:** AES-256-GCM (authenticated encryption).
 
-**Implementation:** `@git-stunts/cas/src/index.js`
+**Implementation:** `@git-stunts/git-cas/src/index.js`
 
 ```javascript
 const cipher = crypto.createCipheriv('aes-256-gcm', encryptionKey, iv);
@@ -1593,7 +1611,7 @@ git cms publish my-post &
 
 ### L
 
-**Lego Block:** In this project, an independent `@git-stunts/*` module with a single responsibility (plumbing, codec, CAS, vault, empty-graph).
+**Lego Block:** In this project, an independent `@git-stunts/*` module with a single responsibility (plumbing, codec, CAS, vault, git-warp).
 
 ### M
 
@@ -1738,8 +1756,8 @@ git-cms/
 **Modules:**
 - `@git-stunts/plumbing` – Low-level Git protocol wrapper
 - `@git-stunts/trailer-codec` – RFC 822 trailer parser
-- `@git-stunts/empty-graph` – Graph database primitive
-- `@git-stunts/cas` – Content-addressable store with encryption
+- `@git-stunts/git-warp` – Graph database primitive
+- `@git-stunts/git-cas` – Content-addressable store with encryption
 - `@git-stunts/vault` – OS keychain integration
 
 ---

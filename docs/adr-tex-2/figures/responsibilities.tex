@@ -1,9 +1,9 @@
 \begin{tikzpicture}[node distance=1cm, auto, font=\small]
     \node [blockshaded, text width=2.5cm, minimum height=8cm] (CMS) {\textbf{CmsService}};
-    \node [block, text width=4.5cm, right=3cm of CMS.north, anchor=north] (PL) {\textbf{@git-stunts/plumbing}\\execute, revParse};
+    \node [block, text width=4.5cm, right=3cm of CMS.north, anchor=north] (PL) {\textbf{@git-stunts/plumbing}\\execute, executeStream};
     \node [block, text width=4.5cm, below=0.5cm of PL] (TC) {\textbf{@git-stunts/trailer-codec}\\encode, decode};
-    \node [block, text width=4.5cm, below=0.5cm of TC] (EG) {\textbf{@git-stunts/empty-graph}\\createNode, readNode};
-    \node [block, text width=4.5cm, below=0.5cm of EG] (CAS) {\textbf{@git-stunts/cas}\\storeFile, retrieveFile};
+    \node [block, text width=4.5cm, below=0.5cm of TC] (EG) {\textbf{@git-stunts/git-warp}\\commitNode, showNode};
+    \node [block, text width=4.5cm, below=0.5cm of EG] (CAS) {\textbf{@git-stunts/git-cas}\\storeFile, retrieveFile};
     \node [block, text width=4.5cm, below=0.5cm of CAS] (V) {\textbf{@git-stunts/vault}\\resolveSecret};
 
     \draw [line] (CMS.east |- PL.west) -- (PL.west);

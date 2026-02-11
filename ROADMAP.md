@@ -31,11 +31,11 @@ INF3 (UI Redesign) ideally after M1.1
 
 ## M0 — Packaging + Infra Guardrails
 
-### PP1 — Publish @git-stunts/cas to npm *(in progress)*
+### PP1 — Publish @git-stunts/git-cas to npm *(complete)*
 
-- **User Story:** As a developer, I can install @git-stunts/cas from npm and rely on semver'd releases.
+- **User Story:** As a developer, I can install @git-stunts/git-cas from npm and rely on semver'd releases.
 - **Requirements:** Build + types published; ESM/CJS policy decided; README usage; license; provenance of build (lockfile); CI publish.
-- **Acceptance Criteria:** `npm i @git-stunts/cas` works; basic example runs; exports map correct; no `file:` deps.
+- **Acceptance Criteria:** `npm i @git-stunts/git-cas` works; basic example runs; exports map correct; no `file:` deps.
 - **Scope:** Packaging + CI publish.
 - **Out of Scope:** API changes unrelated to packaging.
 - **Est. Complexity:** ~120–250 LoC
@@ -50,9 +50,9 @@ INF3 (UI Redesign) ideally after M1.1
 
 ---
 
-### PP2 — Publish @git-stunts/empty-graph to npm *(nearly ready)*
+### PP2 — Publish @git-stunts/git-warp to npm *(complete)*
 
-- **User Story:** As a dev, I can install empty-graph and run core graph ops from npm.
+- **User Story:** As a dev, I can install @git-stunts/git-warp and run core graph ops from npm.
 - **Requirements:** Same packaging checklist; peer deps correct; build artifacts correct.
 - **Acceptance Criteria:** Install + run minimal "create graph → write → read → sync" example.
 - **Scope:** Packaging + CI release.
@@ -66,7 +66,7 @@ INF3 (UI Redesign) ideally after M1.1
 
 ---
 
-### PP3 — Swap file: paths to versioned npm ranges *(blocked by PP1, PP2)*
+### PP3 — Swap file: paths to versioned npm ranges *(executed in-repo)*
 
 - **User Story:** As a maintainer, I can build git-cms from clean installs without monorepo path hacks.
 - **Requirements:** Replace all `file:`; ensure lockfile updates; CI uses `npm ci`; avoid dependency loops.
@@ -81,11 +81,11 @@ INF3 (UI Redesign) ideally after M1.1
   - Edges: hoisting differences.
 - **Def of Done:** No `file:` remains; green pipeline.
 - **Blocking:** PP4
-- **Blocked By:** PP1, PP2
+- **Blocked By:** None
 
 ---
 
-### PP4 — Publish git-cms to npm *(blocked by PP3)*
+### PP4 — Publish git-cms to npm *(ready to execute)*
 
 - **User Story:** As a user, I can install git-cms and run it via documented entrypoints.
 - **Requirements:** CLI or API entry defined; docs; versioning; minimal example.
@@ -100,7 +100,7 @@ INF3 (UI Redesign) ideally after M1.1
   - Edges: OS differences.
 - **Def of Done:** Published; "Getting Started" verified.
 - **Blocking:** Unlocks downstream adoption
-- **Blocked By:** PP3
+- **Blocked By:** Release checklist + publish credential setup
 
 ---
 

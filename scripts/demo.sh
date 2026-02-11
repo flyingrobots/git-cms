@@ -22,14 +22,6 @@ if [ ! -f "package.json" ]; then
   exit 1
 fi
 
-# Check for git-stunts
-if [ ! -d "../git-stunts" ]; then
-  echo "❌ git-stunts not found!"
-  echo ""
-  echo "Please run: npm run setup"
-  exit 1
-fi
-
 # Check Docker
 if ! docker compose &> /dev/null; then
   echo "❌ Docker Compose not available"

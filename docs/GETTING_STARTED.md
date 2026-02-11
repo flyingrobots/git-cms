@@ -9,7 +9,7 @@
 ```bash
 git clone https://github.com/flyingrobots/git-cms.git
 cd git-cms
-npm run setup  # One-time: clones dependencies, checks Docker
+npm run setup  # One-time: validates Docker prerequisites
 npm run demo   # See it in action!
 ```
 
@@ -31,7 +31,7 @@ The safest way to try git-cms is in Docker, which provides complete isolation fr
 git clone https://github.com/flyingrobots/git-cms.git
 cd git-cms
 
-# Run one-time setup (clones git-stunts, checks Docker)
+# Run one-time setup (checks Docker prerequisites)
 npm run setup
 ```
 
@@ -51,7 +51,7 @@ docker compose up app
 ```
 
 **What just happened?**
-- Docker built a containerized environment with Node 20 + Git
+- Docker built a containerized environment with Node 22 + Git
 - Created an isolated Git repository inside the container
 - Started the HTTP server on port 4638
 
@@ -324,7 +324,7 @@ Once you're comfortable with the basics:
    git push stargate
    ```
 3. **Experiment with encryption** (see below)
-4. **Explore the Lego Blocks** in `../git-stunts/` (plumbing, codec, cas, vault, empty-graph)
+4. **Explore installed package APIs** in the project source (`src/lib/CmsService.js`) and docs (`docs/ADR.md`)
 
 ---
 
@@ -388,20 +388,12 @@ ports:
 
 ### "Cannot find module '@git-stunts/...'"
 
-**Solution:** The Lego Blocks need to be in the parent directory:
+**Solution:** reinstall npm dependencies and rebuild containers:
 ```bash
-# Ensure directory structure:
-~/git/
-  git-cms/        ← You are here
-  git-stunts/     ← Lego Blocks should be here
-```
-
-If you only cloned `git-cms`, you need to clone `git-stunts` too:
-```bash
-cd ~/git
-git clone https://github.com/flyingrobots/git-stunts.git
-cd git-cms
-docker compose build  # Rebuild with Lego Blocks
+npm run check:deps
+rm -rf node_modules
+npm ci
+docker compose build --no-cache
 ```
 
 ### "Tests fail immediately"

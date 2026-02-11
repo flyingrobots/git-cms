@@ -9,7 +9,7 @@ Git CMS has multiple test suites to ensure everything works correctly.
 Tests the `scripts/setup.sh` script to ensure it:
 - Validates prerequisites correctly
 - Handles missing dependencies gracefully
-- Clones git-stunts when needed
+- Confirms npm-package dependency model assumptions
 - Provides helpful error messages
 
 **Run:**
@@ -22,16 +22,13 @@ npm run test:setup
 - ✅ Checks for Docker installation
 - ✅ Checks for Docker Compose
 - ✅ Checks if Docker daemon is running
-- ✅ Detects existing git-stunts directory
-- ✅ Offers to clone git-stunts if missing
-- ✅ Handles user accepting/declining clone
-- ✅ Handles git clone failures gracefully
+- ✅ Reports npm-package dependency mode
 - ✅ Shows helpful next steps
 
 **Test Environment:**
 All tests run in Docker using the `bats/bats` image. Each test:
 - Creates a temporary directory
-- Mocks external commands (docker, git)
+- Mocks external commands (docker)
 - Runs the setup script in isolation
 - Cleans up afterward
 

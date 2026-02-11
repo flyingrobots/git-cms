@@ -9,7 +9,7 @@
 ```bash
 git clone https://github.com/flyingrobots/git-cms.git
 cd git-cms
-npm run setup  # Clones git-stunts, checks Docker
+npm run setup  # Checks Docker and validates environment
 npm run demo   # See it work!
 ```
 
@@ -19,7 +19,7 @@ npm run demo   # See it work!
 
 | Command | Purpose |
 |---------|---------|
-| `npm run setup` | One-time setup (clones dependencies) |
+| `npm run setup` | One-time setup (checks prerequisites) |
 | `npm run demo` | Automated demo with explanations |
 | `npm run quickstart` | Interactive menu |
 | `npm run dev` | Start HTTP server (http://localhost:4638) |
@@ -108,8 +108,8 @@ git-cms
   └─ CmsService (orchestrator)
        ├─ @git-stunts/plumbing (Git commands)
        ├─ @git-stunts/trailer-codec (RFC 822 trailers)
-       ├─ @git-stunts/empty-graph (commits on empty tree)
-       ├─ @git-stunts/cas (encrypted asset storage)
+       ├─ @git-stunts/git-warp (commits on empty tree)
+       ├─ @git-stunts/git-cas (encrypted asset storage)
        └─ @git-stunts/vault (OS keychain for secrets)
 ```
 
@@ -184,7 +184,8 @@ Publishing is **atomic** and **fast-forward only**.
 
 ### "Cannot find module '@git-stunts/...'"
 ```bash
-npm run setup  # Clones git-stunts automatically
+npm ci
+npm run check:deps
 ```
 
 ### "Port 4638 already in use"

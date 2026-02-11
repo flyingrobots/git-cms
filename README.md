@@ -17,7 +17,7 @@ A serverless, database-free CMS built on Git plumbing.
 git clone https://github.com/flyingrobots/git-cms.git
 cd git-cms
 
-# Run setup (clones dependencies, checks Docker)
+# Run setup (checks Docker + validates environment)
 npm run setup
 ```
 

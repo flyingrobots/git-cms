@@ -21,7 +21,7 @@ if ! command -v docker &> /dev/null; then
 fi
 
 # Check if Docker Compose is available
-if ! command -v docker compose &> /dev/null; then
+if ! docker compose version &> /dev/null; then
   echo "❌ Docker Compose not found!"
   echo ""
   echo "Docker Compose should come with Docker Desktop."
@@ -42,23 +42,8 @@ fi
 echo "✅ Docker is ready"
 echo ""
 
-# Check if we have the Lego Blocks
-if [ ! -d "../git-stunts" ]; then
-  echo "⚠️  git-stunts Lego Blocks not found!"
-  echo ""
-  echo "Git CMS requires git-stunts to be in the parent directory."
-  echo ""
-  echo "Run setup to clone it automatically:"
-  echo "  npm run setup"
-  echo ""
-  echo "Or clone manually:"
-  echo "  cd .. && git clone https://github.com/flyingrobots/git-stunts.git"
-  echo ""
-  exit 1
-else
-  echo "✅ git-stunts Lego Blocks found"
-  echo ""
-fi
+echo "✅ Dependency mode: npm packages (no sibling git-stunts checkout required)"
+echo ""
 
 # Offer to build or start
 echo "What would you like to do?"

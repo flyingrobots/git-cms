@@ -24,12 +24,11 @@ npm run dev          # Start server
 
 ### Required Directory Structure
 
-Git CMS depends on "Lego Block" modules from the `git-stunts` repository. Your directory structure must be:
+Only this repository is required:
 
 ```
-~/git/                    ← Can be anywhere, doesn't have to be ~/git
-  ├── git-cms/           ← This repository
-  └── git-stunts/        ← Required dependency
+~/git/
+  └── git-cms/           ← This repository
 ```
 
 ### Clone and Setup
@@ -41,20 +40,19 @@ cd ~/git  # Or wherever you want to keep these
 git clone https://github.com/flyingrobots/git-cms.git
 cd git-cms
 
-# Run setup (this clones git-stunts and checks Docker)
+# Run setup (checks Docker prerequisites)
 npm run setup
 ```
 
 **What `npm run setup` does:**
 - Checks Docker is installed and running
-- Clones git-stunts (Lego Blocks) to `../git-stunts/`
-- Verifies the directory structure is correct
+- Verifies Docker Compose is available
+- Confirms the npm-package dependency model (no sibling repo required)
 
 After setup, your structure will be:
 ```
 ~/git/
-  ├── git-cms/       ← You are here
-  └── git-stunts/    ← Auto-cloned by setup
+  └── git-cms/       ← You are here
 ```
 
 ### Install Docker
@@ -285,21 +283,19 @@ cd git-cms && npm unlink
 
 ### "Cannot find module '@git-stunts/...'"
 
-**Cause:** The `git-stunts` directory is not in the expected location.
+**Cause:** npm dependencies were not installed correctly, or lockfile integrity regressed.
 
 **Solution:**
 ```bash
-# Verify structure
-ls -l ..
-# Should show both git-cms and git-stunts
+# Validate lockfile/package integrity
+npm run check:deps
 
-# If git-stunts is missing
-cd ..
-git clone https://github.com/flyingrobots/git-stunts.git
-cd git-cms
+# Reinstall cleanly
+rm -rf node_modules
+npm ci
 
 # Rebuild Docker images
-docker compose build
+docker compose build --no-cache
 ```
 
 ### "Port 4638 already in use"

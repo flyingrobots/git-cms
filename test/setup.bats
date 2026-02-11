@@ -22,11 +22,15 @@ teardown() {
   rm -rf "$TEST_DIR"
 }
 
-# Helper: Create a mock Docker that works
+# Helper: Create a mock Docker CLI that passes compose and daemon checks.
 mock_docker_working() {
   cat > "$TEST_DIR/mocks/docker" <<'EOF'
 #!/bin/bash
-# Mock docker that passes all checks
+# Mock docker that passes all setup checks
+if [[ "$1" == "compose" && "$2" == "version" ]]; then
+  echo "Docker Compose version v2.0.0"
+  exit 0
+fi
 if [[ "$1" == "info" ]]; then
   echo "Docker info"
   exit 0
@@ -35,34 +39,6 @@ echo "Docker version 20.10.0"
 exit 0
 EOF
   chmod +x "$TEST_DIR/mocks/docker"
-}
-
-# Helper: Create mock git that succeeds at cloning
-mock_git_clone_success() {
-  local test_dir="$TEST_DIR"
-  cat > "$TEST_DIR/mocks/git" <<EOF
-#!/bin/bash
-if [[ "\$1" == "clone" ]]; then
-  mkdir -p "$test_dir/git-stunts"
-  echo "Cloning into 'git-stunts'..."
-  exit 0
-fi
-exit 0
-EOF
-  chmod +x "$TEST_DIR/mocks/git"
-}
-
-# Helper: Create mock git that fails at cloning
-mock_git_clone_fail() {
-  cat > "$TEST_DIR/mocks/git" <<'EOF'
-#!/bin/bash
-if [[ "$1" == "clone" ]]; then
-  echo "fatal: repository not found"
-  exit 128
-fi
-exit 0
-EOF
-  chmod +x "$TEST_DIR/mocks/git"
 }
 
 @test "setup fails if not run from git-cms directory" {
@@ -81,10 +57,34 @@ EOF
   [[ "$output" =~ "Docker not found" ]]
 }
 
+@test "setup checks for docker compose availability" {
+  cat > "$TEST_DIR/mocks/docker" <<'EOF'
+#!/bin/bash
+if [[ "$1" == "compose" && "$2" == "version" ]]; then
+  exit 1
+fi
+if [[ "$1" == "info" ]]; then
+  echo "Docker info"
+  exit 0
+fi
+echo "Docker version 20.10.0"
+exit 0
+EOF
+  chmod +x "$TEST_DIR/mocks/docker"
+
+  run bash scripts/setup.sh
+  [ "$status" -eq 1 ]
+  [[ "$output" =~ "Docker Compose not found" ]]
+}
+
 @test "setup checks if docker daemon is running" {
   # Mock docker command exists
   cat > "$TEST_DIR/mocks/docker" <<'EOF'
 #!/bin/bash
+if [[ "$1" == "compose" && "$2" == "version" ]]; then
+  echo "Docker Compose version v2.0.0"
+  exit 0
+fi
 if [[ "$1" == "info" ]]; then
   # Simulate daemon not running
   exit 1
@@ -99,64 +99,18 @@ EOF
   [[ "$output" =~ "Docker daemon not running" ]]
 }
 
-@test "setup succeeds if git-stunts already exists" {
+@test "setup succeeds when docker prerequisites are met" {
   mock_docker_working
-
-  # Create git-stunts directory
-  mkdir -p "$TEST_DIR/git-stunts"
 
   run bash scripts/setup.sh
   [ "$status" -eq 0 ]
-  [[ "$output" =~ "git-stunts found" ]]
+  [[ "$output" =~ "Uses published npm packages" ]]
+  [[ "$output" =~ "No sibling ../git-stunts checkout required" ]]
   [[ "$output" =~ "Setup complete" ]]
-}
-
-@test "setup offers to clone git-stunts if not found" {
-  mock_docker_working
-
-  # Don't create git-stunts
-  # Simulate user declining (send 'n' to stdin)
-  run bash scripts/setup.sh <<< "n"
-
-  # Debug: print actual output
-  echo "Status: $status" >&3
-  echo "Output:" >&3
-  echo "$output" >&3
-
-  [ "$status" -eq 1 ]
-  [[ "$output" =~ "git-stunts not found" ]]
-  [[ "$output" =~ "Would you like me to clone it now" ]]
-  [[ "$output" =~ "Setup cancelled" ]]
-}
-
-@test "setup clones git-stunts if user accepts" {
-  mock_docker_working
-  mock_git_clone_success
-
-  # Simulate user accepting (send 'y' to stdin)
-  run bash scripts/setup.sh <<< "y"
-  [ "$status" -eq 0 ]
-  [[ "$output" =~ "Cloning git-stunts" ]]
-  [[ "$output" =~ "Setup complete" ]]
-  [ -d "$TEST_DIR/git-stunts" ]
-}
-
-@test "setup fails gracefully if git clone fails" {
-  mock_docker_working
-  mock_git_clone_fail
-
-  # Simulate user accepting (send 'y' to stdin)
-  run bash scripts/setup.sh <<< "y"
-  [ "$status" -eq 1 ]
-  [[ "$output" =~ "Failed to clone git-stunts" ]]
-  [[ "$output" =~ "Please clone manually" ]]
 }
 
 @test "setup shows helpful next steps after success" {
   mock_docker_working
-
-  # Create git-stunts
-  mkdir -p "$TEST_DIR/git-stunts"
 
   run bash scripts/setup.sh
   [ "$status" -eq 0 ]
