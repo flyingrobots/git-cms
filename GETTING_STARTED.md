@@ -1,6 +1,6 @@
 # Getting Started with Git CMS
 
-This quick guide is the lightweight entry point. For the full walkthrough, use [`docs/GETTING_STARTED.md`](docs/GETTING_STARTED.md).
+This quick guide is the lightweight entry point. For the full Docker-focused walkthrough in the docs folder, see [`docs/GETTING_STARTED.md`](docs/GETTING_STARTED.md).
 
 ---
 

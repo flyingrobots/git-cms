@@ -764,9 +764,11 @@ graph TB
 
 **Deployment Steps:**
 ```bash
+# One-time setup (from your cloned git-cms repo):
+# npm link
+
 cd ~/blog
 git init
-npm install -g git-cms
 echo "# My Post" | git cms draft my-post "Title"
 git cms publish my-post
 ```

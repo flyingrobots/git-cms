@@ -9,17 +9,17 @@ git-cms-test-*/
 .obsidian/
 
 # LaTeX artifacts
-*.aux
-*.log
-*.out
-*.toc
-*.synctex.gz
-*.fls
-*.fdb_latexmk
-*.bbl
-*.blg
-*.idx
-*.ind
-*.ilg
-*.lof
-*.lot
+docs/adr-tex-2/*.aux
+docs/adr-tex-2/*.log
+docs/adr-tex-2/*.out
+docs/adr-tex-2/*.toc
+docs/adr-tex-2/*.synctex.gz
+docs/adr-tex-2/*.fls
+docs/adr-tex-2/*.fdb_latexmk
+docs/adr-tex-2/*.bbl
+docs/adr-tex-2/*.blg
+docs/adr-tex-2/*.idx
+docs/adr-tex-2/*.ind
+docs/adr-tex-2/*.ilg
+docs/adr-tex-2/*.lof
+docs/adr-tex-2/*.lot

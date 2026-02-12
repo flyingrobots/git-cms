@@ -2,7 +2,7 @@
     \node [block] (Author) {Author\\(Human)};
     \node [block, below=1cm of Author] (GitCMS) {\textbf{git-cms}\\(Node.js App)};
     \node [block, right=2cm of GitCMS] (Stargate) {git-stargate\\(Git Gateway)};
-    \node [block, below=1cm of GitCMS] (LocalRepo) {.git/objects/\\(Local Repository)};
+    \node [block, below=1cm of GitCMS] (LocalRepo) {\texttt{.git/objects/}\\(Local Repository)};
     \node [block, right=2cm of Stargate] (PublicMirror) {Public Mirror\\(GitHub/GitLab)};
 
     \draw [line] (Author) -- node [align=center, scale=0.8] {CLI/HTTP API} (GitCMS);

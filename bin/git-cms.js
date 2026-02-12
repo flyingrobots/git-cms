@@ -10,19 +10,22 @@ async function main() {
   const cwd = process.cwd();
   const refPrefix = process.env.CMS_REF_PREFIX || DEFAULT_REF_PREFIX;
 
-  const cms = new CmsService({ cwd, refPrefix });
-
   try {
+    const cms = new CmsService({ cwd, refPrefix });
     switch (cmd) {
       case 'draft': {
         const [rawSlug, title] = args;
         if (!rawSlug || !title) throw new Error('Usage: git cms draft <slug> "Title" < content.md');
         const slug = canonicalizeSlug(rawSlug);
-        
+
+        if (process.stdin.isTTY) {
+          throw new Error('Usage: git cms draft <slug> "Title" < content.md');
+        }
+
         const chunks = [];
         for await (const chunk of process.stdin) chunks.push(chunk);
         const body = Buffer.concat(chunks).toString('utf8');
-        
+
         const res = await cms.saveSnapshot({ slug, title, body });
         console.log(`Saved draft: ${res.sha} (${res.ref})`);
         break;
@@ -31,7 +34,7 @@ async function main() {
         const [rawSlug] = args;
         if (!rawSlug) throw new Error('Usage: git cms publish <slug>');
         const slug = canonicalizeSlug(rawSlug);
-        
+
         const res = await cms.publishArticle({ slug });
         console.log(`Published: ${res.sha} (${res.ref})`);
         break;
@@ -66,12 +69,12 @@ async function main() {
         process.exit(1);
     }
   } catch (err) {
-    console.error(`Error: ${err.message}`);
+    console.error(`Error: ${err instanceof Error ? err.message : String(err)}`);
     process.exit(1);
   }
 }
 
 main().catch((err) => {
-  console.error(`Error: ${err.message}`);
+  console.error(`Error: ${err instanceof Error ? err.message : String(err)}`);
   process.exit(1);
 });

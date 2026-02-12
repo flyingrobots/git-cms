@@ -20,7 +20,7 @@ The \texttt{@git-stunts/plumbing} module executes Git via shell commands (\textt
 \textbf{TC-4: No Database Indexes} \\
 Traditional databases provide B-tree indexes for fast lookups. Git's ref enumeration is linear (\texttt{O(n)} for listing all refs in a namespace).
 
-\textbf{Mitigation:} Use ref namespaces strategically (e.g., \texttt{refs/\_blog/articles/<slug>}) to avoid polluting the global ref space.
+\textbf{Mitigation:} Use ref namespaces strategically (e.g., \texttt{refs/\_blog/articles/\textless slug\textgreater}) to avoid polluting the global ref space.
 
 \subsection{Regulatory Constraints}
 

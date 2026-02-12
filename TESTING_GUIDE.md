@@ -203,12 +203,15 @@ docker compose run --rm test
 
 ## Advanced: Local Installation (Not Recommended Initially)
 
-If you understand what git-cms does and want to install it globally on your host:
+If you understand what git-cms does and want host CLI access:
 
 ```bash
-npm install -g git-cms
-# OR
-cd git-cms && npm link
+# From source (recommended until npm publish is complete):
+cd git-cms
+npm link
+
+# After publish, global install will work:
+# npm install -g git-cms
 ```
 
 **⚠️ WARNING:** Only use git-cms in dedicated repositories:

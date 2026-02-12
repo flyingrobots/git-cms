@@ -72,11 +72,13 @@ docker compose run --rm test
 ## Installation
 
 ```bash
-npm install -g git-cms
-# or linked locally
+# From source (recommended until npm publish):
 git clone https://github.com/flyingrobots/git-cms.git
 cd git-cms
 npm link
+
+# After publish, global install will work:
+# npm install -g git-cms
 ```
 
 ## Usage
@@ -114,13 +116,13 @@ Content is stored in `refs/_blog/articles/<slug>`.
 echo "# Hello World" | git cms draft hello-world "My First Post"
 ```
 
-### 3. List Articles
+### 4. List Articles
 ```bash
 git cms list
 # -> refs/_blog/articles/hello-world My First Post
 ```
 
-### 4. Publish
+### 5. Publish
 Publishing fast-forwards `refs/_blog/published/<slug>` to match the draft.
 
 ```bash
