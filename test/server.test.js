@@ -3,16 +3,20 @@ import { mkdtempSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from 'nod
 import path from 'node:path';
 import os from 'node:os';
 import { execFileSync } from 'node:child_process';
-import { startServer } from '../src/server/index.js';
 
 describe('Server API (Integration)', () => {
   let cwd;
   let server;
   let baseUrl;
+  let startServer;
   let leakedFilePath;
   let symlinkPath;
   let previousRepoEnv;
   let previousPortEnv;
+  let previousAuthorNameEnv;
+  let previousAuthorEmailEnv;
+  let previousCommitterNameEnv;
+  let previousCommitterEmailEnv;
 
   beforeAll(async () => {
     cwd = mkdtempSync(path.join(os.tmpdir(), 'git-cms-server-api-test-'));
@@ -22,8 +26,18 @@ describe('Server API (Integration)', () => {
 
     previousRepoEnv = process.env.GIT_CMS_REPO;
     previousPortEnv = process.env.PORT;
+    previousAuthorNameEnv = process.env.GIT_AUTHOR_NAME;
+    previousAuthorEmailEnv = process.env.GIT_AUTHOR_EMAIL;
+    previousCommitterNameEnv = process.env.GIT_COMMITTER_NAME;
+    previousCommitterEmailEnv = process.env.GIT_COMMITTER_EMAIL;
     process.env.GIT_CMS_REPO = cwd;
     process.env.PORT = '0';
+    process.env.GIT_AUTHOR_NAME = 'Test';
+    process.env.GIT_AUTHOR_EMAIL = 'test@example.com';
+    process.env.GIT_COMMITTER_NAME = 'Test';
+    process.env.GIT_COMMITTER_EMAIL = 'test@example.com';
+
+    ({ startServer } = await import('../src/server/index.js'));
     
     server = startServer();
     
@@ -64,6 +78,26 @@ describe('Server API (Integration)', () => {
       delete process.env.PORT;
     } else {
       process.env.PORT = previousPortEnv;
+    }
+    if (previousAuthorNameEnv === undefined) {
+      delete process.env.GIT_AUTHOR_NAME;
+    } else {
+      process.env.GIT_AUTHOR_NAME = previousAuthorNameEnv;
+    }
+    if (previousAuthorEmailEnv === undefined) {
+      delete process.env.GIT_AUTHOR_EMAIL;
+    } else {
+      process.env.GIT_AUTHOR_EMAIL = previousAuthorEmailEnv;
+    }
+    if (previousCommitterNameEnv === undefined) {
+      delete process.env.GIT_COMMITTER_NAME;
+    } else {
+      process.env.GIT_COMMITTER_NAME = previousCommitterNameEnv;
+    }
+    if (previousCommitterEmailEnv === undefined) {
+      delete process.env.GIT_COMMITTER_EMAIL;
+    } else {
+      process.env.GIT_COMMITTER_EMAIL = previousCommitterEmailEnv;
     }
     rmSync(cwd, { recursive: true, force: true });
   });
