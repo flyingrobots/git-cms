@@ -1,0 +1,47 @@
+\section{Constraints}
+
+\subsection{Technical Constraints}
+
+\textbf{TC-1: Git's Content Addressability Model} \\
+Git uses SHA-1 hashing for object addressing. While SHA-1 has known collision vulnerabilities, Git is transitioning to SHA-256. The system assumes SHA-1 is ``good enough'' for content addressing (not for security-critical signing).
+
+\textbf{Mitigation:} Use GPG signing (\texttt{CMS\_SIGN=1}) for cryptographic non-repudiation.
+
+\textbf{TC-2: Filesystem I/O Performance} \\
+All Git operations are ultimately filesystem operations. Performance is bounded by disk I/O, especially for large repositories.
+
+\textbf{Mitigation:} Content is stored as commit messages (small), not files (large). Asset chunking (256KB) reduces blob size.
+
+\textbf{TC-3: POSIX Shell Dependency} \\
+The \texttt{@git-stunts/plumbing} module executes Git via shell commands (\texttt{child\_process.spawn}). This requires a POSIX-compliant shell and Git CLI.
+
+\textbf{Mitigation:} All tests run in Docker (Alpine Linux) to ensure consistent environments.
+
+\textbf{TC-4: No Database Indexes} \\
+Traditional databases provide B-tree indexes for fast lookups. Git's ref enumeration is linear (\texttt{O(n)} for listing all refs in a namespace).
+
+\textbf{Mitigation:} Use ref namespaces strategically (e.g., \texttt{refs/\_blog/articles/\textless slug\textgreater}) to avoid polluting the global ref space.
+
+\subsection{Regulatory Constraints}
+
+\textbf{RC-1: GDPR Right to Erasure} \\
+Git's immutability conflicts with GDPR's ``right to be forgotten.'' Deleting a commit requires rewriting history, which breaks cryptographic integrity.
+
+\textbf{Mitigation:} Use encrypted assets with key rotation. Deleting the encryption key renders historical content unreadable without altering Git history.
+
+\textbf{RC-2: Cryptographic Export Restrictions} \\
+AES-256-GCM encryption may face export restrictions in certain jurisdictions.
+
+\textbf{Mitigation:} Encryption is optional and can be disabled in restricted jurisdictions. When enabled via \texttt{@git-stunts/vault}, deployments should follow legal counsel, jurisdiction-specific distribution policy, and organizational export-control requirements.
+
+\subsection{Operational Constraints}
+
+\textbf{OC-1: Single-Writer Assumption} \\
+Git's ref updates are atomic \textit{locally} but not across distributed clones. Concurrent writes to the same ref can cause conflicts.
+
+\textbf{Mitigation:} Use \textbf{git-stargate}\footnote{\url{https://github.com/flyingrobots/git-stargate}} to enforce serialized writes via SSH.
+
+\textbf{OC-2: Repository Growth} \\
+Every draft save creates a new commit. Repositories can grow unbounded over time.
+
+\textbf{Mitigation:} Use \texttt{git gc} aggressively. Consider ref pruning for old drafts.

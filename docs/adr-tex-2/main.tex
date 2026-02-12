@@ -1,0 +1,113 @@
+\documentclass[11pt,a4paper]{article}
+
+% --- Packages ---
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern} 
+\usepackage[margin=1in, headheight=14pt]{geometry} 
+\usepackage{titlesec}
+\usepackage{titletoc}
+\usepackage{fancyhdr}
+\usepackage{graphicx} 
+\usepackage{booktabs} 
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{enumitem} 
+\usepackage{float}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{shapes, arrows.meta, positioning, fit, backgrounds, calc, shadows, trees}
+\usepackage{amssymb} 
+\usepackage{xurl} 
+\usepackage[hidelinks]{hyperref}
+
+% --- Typography & Layout ---
+\hypersetup{
+    colorlinks=false,
+    pdftitle={Architecture Decision Record: Git CMS},
+    pdfauthor={James Ross}
+}
+
+\usepackage{parskip}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.8em}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\nouppercase{\leftmark}}
+\fancyhead[R]{Git CMS ADR}
+\fancyfoot[C]{\thepage}
+
+\titleformat{\section}{\Large\bfseries\sffamily}{\thesection}{1em}{}
+\titleformat{\subsection}{\large\bfseries\sffamily}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}{\bfseries\sffamily}{\thesubsubsection}{1em}{}
+
+\lstset{
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    frame=single, 
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    captionpos=b,
+    keepspaces=true,
+    showstringspaces=false,
+    keywordstyle=\bfseries, 
+    commentstyle=\itshape,  
+    stringstyle=,           
+}
+
+% --- Textbook B&W TikZ Styles ---
+\tikzset{
+    base/.style={draw=black, thick, font=\sffamily\small, align=center, inner sep=8pt},
+    block/.style={base, rectangle, rounded corners=2pt, fill=white},
+    blockshaded/.style={base, rectangle, rounded corners=2pt, fill=gray!10},
+    line/.style={draw=black, thick, -Latex},
+    dashed-line/.style={draw=black, thick, dashed, -Latex}
+}
+
+\begin{document}
+
+\input{meta}
+
+\begin{titlepage}
+    \centering
+    \vspace*{3cm}
+    {\fontsize{30}{36}\selectfont \textbf{Architecture Decision Record}\\[0.5em]}
+    {\fontsize{20}{24}\selectfont \textit{Git CMS}\\[1.5cm]}
+    
+    \rule{\textwidth}{1pt}\\[0.5cm]
+    {\Large Database-Free Content Management via Git Plumbing}\\[3cm]
+    
+    \textbf{Author:} James Ross \\
+    \textbf{Version:} 1.0.0 \\
+    \textbf{Date:} 2026-01-11
+    
+    \vfill
+    \textit{Prepared for Engineering Review}
+    \vspace{2cm}
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+\input{sections/01-introduction}
+\input{sections/02-constraints}
+\input{sections/03-context}
+\input{sections/04-solution}
+\input{sections/05-building-blocks}
+\input{sections/06-runtime}
+\input{sections/07-deployment}
+\input{sections/08-crosscutting}
+\input{sections/09-decisions}
+\input{sections/10-quality}
+\input{sections/11-risks}
+\input{sections/12-glossary}
+
+\appendix
+\input{sections/A-commands}
+\input{sections/B-structure}
+\input{sections/C-related}
+\input{sections/D-references}
+
+\end{document}

@@ -1,7 +1,11 @@
+# IMPORTANT: Run docker compose from THIS directory (git-cms/).
+# Build context is this repository only; no sibling repos required.
+
 services:
   app:
     build:
       context: .
+      dockerfile: Dockerfile
       target: dev
     volumes:
       - .:/app
@@ -11,15 +15,24 @@ services:
     environment:
       - PORT=4638
       - GIT_CMS_ENV=dev
+      - GIT_AUTHOR_NAME=Git CMS Dev
+      - GIT_AUTHOR_EMAIL=dev@git-cms.local
+      - GIT_COMMITTER_NAME=Git CMS Dev
+      - GIT_COMMITTER_EMAIL=dev@git-cms.local
     command: npm run serve
 
   test:
     build:
       context: .
+      dockerfile: Dockerfile
       target: test
     volumes:
       - .:/app
       - /app/node_modules
     environment:
       - CI=true
+      - GIT_AUTHOR_NAME=Git CMS Bot
+      - GIT_AUTHOR_EMAIL=bot@git-cms.local
+      - GIT_COMMITTER_NAME=Git CMS Bot
+      - GIT_COMMITTER_EMAIL=bot@git-cms.local
     command: npm run test:local

@@ -8,7 +8,44 @@ A serverless, database-free CMS built on Git plumbing.
 
 **git-cms** treats your Git repository as a distributed, cryptographically verifiable database. Instead of files, it stores content as commit messages on "empty trees," creating a linear, append-only ledger for articles, comments, or any other structured data.
 
-### Features
+## Quick Start (Docker - Safe!)
+
+### One-Time Setup
+
+```bash
+# Clone this repo
+git clone https://github.com/flyingrobots/git-cms.git
+cd git-cms
+
+# Run setup (checks Docker + validates environment)
+npm run setup
+```
+
+### Try It Out
+
+```bash
+# Option 1: See a demo (recommended first time)
+npm run demo
+
+# Option 2: Interactive menu
+npm run quickstart
+
+# Option 3: Just start the server
+npm run dev
+# Open http://localhost:4638
+```
+
+**Everything runs in Docker - completely safe for your local Git setup.**
+
+## ⚠️ SAFETY WARNING
+
+**This project manipulates Git repositories at a low level. ALWAYS use Docker for testing.**
+
+The tests create, destroy, and manipulate Git repositories. Running low-level plumbing commands on your host filesystem is risky - a typo could affect your local Git setup. That's why we built Docker isolation into everything.
+
+**Read more:** [TESTING_GUIDE.md](./TESTING_GUIDE.md) | [docs/GETTING_STARTED.md](./docs/GETTING_STARTED.md) | [docs/CONTENT_ID_POLICY.md](./docs/CONTENT_ID_POLICY.md)
+
+## Features
 
 - **Database-Free:** No SQL, No NoSQL. Just Git objects (Merkle DAG).
 - **Fast-Forward Only:** Enforces strict linear history for provenance.
@@ -17,19 +54,6 @@ A serverless, database-free CMS built on Git plumbing.
 
 ## Development
 
-### ⚠️ SAFETY WARNING
-
-We use Docker Compose to ensure a consistent, safe environment.
-
-**If you clone this repo and want to run the tests, ALWAYS run them in Docker.**
-
-The tests create, destroy, and manipulate Git repositories. While we try to use temporary directories, running low-level plumbing commands against your host filesystem is a risk you shouldn't take.
-
-We provided a safe harness:
-```bash
-npm test
-# (This automatically runs ./test/run-docker.sh)
-```
 ### Start the Server (Dev Mode)
 ```bash
 npm run dev
@@ -48,11 +72,13 @@ docker compose run --rm test
 ## Installation
 
 ```bash
-npm install -g git-cms
-# or linked locally
+# From source (recommended until npm publish):
 git clone https://github.com/flyingrobots/git-cms.git
 cd git-cms
 npm link
+
+# After publish, global install will work:
+# npm install -g git-cms
 ```
 
 ## Usage
@@ -90,13 +116,13 @@ Content is stored in `refs/_blog/articles/<slug>`.
 echo "# Hello World" | git cms draft hello-world "My First Post"
 ```
 
-### 3. List Articles
+### 4. List Articles
 ```bash
 git cms list
 # -> refs/_blog/articles/hello-world My First Post
 ```
 
-### 4. Publish
+### 5. Publish
 Publishing fast-forwards `refs/_blog/published/<slug>` to match the draft.
 
 ```bash

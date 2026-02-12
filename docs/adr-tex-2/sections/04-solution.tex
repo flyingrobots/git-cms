@@ -1,0 +1,62 @@
+\section{Solution Strategy}
+
+\subsection{Core Architectural Principles}
+
+\paragraph{P-1: Composition over Inheritance}
+The system is built from \textbf{five independent Lego Block modules} (\texttt{@git-stunts/*}), each with a single responsibility. These modules are composed in \texttt{CmsService} to create higher-order functionality.
+
+\textbf{Benefit:} Each module can be tested, versioned, and published independently.
+
+\paragraph{P-2: Hexagonal Architecture (Ports \& Adapters)}
+The domain layer (\texttt{CmsService}) depends on abstractions (\texttt{GitPlumbing}, \texttt{TrailerCodec}), not implementations. This allows swapping out Git for other backends (e.g., a pure JavaScript implementation for testing).
+
+\textbf{Benefit:} Decouples domain logic from infrastructure concerns.
+
+\paragraph{P-3: Content Addressability}
+Assets are stored by their SHA-1 hash, enabling automatic deduplication. If two articles reference the same image, it's stored once.
+
+\textbf{Benefit:} Reduces repository bloat.
+
+\paragraph{P-4: Cryptographic Integrity}
+Every operation produces a cryptographically signed commit (when \texttt{CMS\_SIGN=1}). The Merkle DAG ensures tamper detection.
+
+\textbf{Benefit:} Audit trails are mathematically verifiable, not just trust-based.
+
+\subsection{Solution Approach: The \"Empty Tree\" Stunt}
+
+\paragraph{The Problem}
+Traditional CMSs store content in database rows. Git is designed to track \textit{files}, not arbitrary data. Storing blog posts as files (e.g., \texttt{posts/hello-world.md}) clutters the working directory and causes merge conflicts.
+
+\paragraph{The Solution}
+Store content as \textbf{commit messages on empty trees}, not as files. Every article is a commit that points to the well-known empty tree (\texttt{4b825dc642cb6eb9a060e54bf8d69288fbee4904}).
+
+\textbf{How It Works:}
+\begin{enumerate}[noitemsep]
+    \item Encode the article (title, body, metadata) into a Git commit message using RFC 822 trailers.
+    \item Create a commit that points to the empty tree (no files touched).
+    \item Update a ref (e.g., \texttt{refs/\_blog/articles/hello-world}) to point to this commit.
+\end{enumerate}
+
+\textbf{Result:} The repository's working directory remains clean. All content lives in \texttt{.git/objects/} and \texttt{.git/refs/}.
+
+\paragraph{Architectural Pattern: Event Sourcing}
+Each draft save creates a new commit. The \"current\" article is the ref's tip, but the full history is a linked list of commits.
+
+\textbf{Benefit:} Point-in-time recovery is trivial (\texttt{git log refs/\_blog/articles/<slug>}).
+
+\subsection{Key Design Decisions}
+
+\paragraph{D-1: Why Commit Messages, Not Blobs?}
+\textbf{Alternative:} Store articles as Git blobs and reference them via trees. \\
+\textbf{Decision:} Use commit messages. \\
+\textbf{Rationale:} Commits have parent pointers (version history) and support GPG signing (non-repudiation). Blobs are opaque; messages are human-readable.
+
+\paragraph{D-2: Why Trailers, Not JSON?}
+\textbf{Alternative:} Store \texttt{\{\"title\": \"Hello\", ...\}} as the message. \\
+\textbf{Decision:} Use RFC 822 trailers. \\
+\textbf{Rationale:} Trailers are Git-native, human-readable, and diff-friendly. Backward parsing is efficient.
+
+\paragraph{D-3: Why Encrypt Assets, Not Repos?}
+\textbf{Alternative:} Use \texttt{git-crypt} for the whole repo. \\
+\textbf{Decision:} Encrypt individual assets client-side. \\
+\textbf{Rationale:} Granular control; the gateway never sees plaintext.

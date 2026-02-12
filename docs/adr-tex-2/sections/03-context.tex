@@ -1,0 +1,93 @@
+\section{Context \& Scope}
+
+\subsection{System Context Diagram}
+
+\begin{figure}[H]
+\centering
+\resizebox{\textwidth}{!}{
+\begin{tikzpicture}[node distance=2cm, auto]
+    \node [block] (Author) {Author\\(Human)};
+    \node [block, below=1cm of Author] (GitCMS) {\textbf{git-cms}\\(Node.js App)};
+    \node [block, right=2.5cm of GitCMS] (Stargate) {git-stargate\\(Git Gateway)};
+    \node [block, below=1.5cm of GitCMS] (LocalRepo) {.git/objects/\\(Local Repo)};
+    \node [block, right=2.5cm of Stargate] (PublicMirror) {Public Mirror\\(GitHub/GitLab)};
+
+    \path [line] (Author) -- node [align=center, scale=0.8] {CLI /\\ HTTP API} (GitCMS);
+    \path [line] (GitCMS) -- node [align=center, scale=0.8] {git push} (Stargate);
+    \path [line] (GitCMS) -- node [align=center, scale=0.8, swap] {read /\\ write} (LocalRepo);
+    \path [line] (Stargate) -- node [align=center, scale=0.8] {mirror} (PublicMirror);
+\end{tikzpicture}
+}
+\caption{System context diagram showing the high-level relationship between the Author, Git CMS, and external components.}
+\end{figure}
+
+\subsection{External Interfaces}
+
+\subsubsection{Interface 1: CLI (Binary)}
+\begin{itemize}[noitemsep]
+    \item \textbf{Entry Point:} \texttt{bin/git-cms.js}
+    \item \textbf{Commands:} \texttt{draft}, \texttt{publish}, \texttt{list}, \texttt{show}, \texttt{serve}
+    \item \textbf{Protocol:} POSIX command-line arguments
+    \item \textbf{Example:}
+\end{itemize}
+
+\begin{lstlisting}[language=bash]
+echo "# Hello World" | git cms draft hello-world "My First Post"
+\end{lstlisting}
+
+\subsubsection{Interface 2: HTTP API (REST)}
+\begin{itemize}[noitemsep]
+    \item \textbf{Server:} \texttt{src/server/index.js}
+    \item \textbf{Port:} 4638 (configurable via \texttt{PORT} env var)
+    \item \textbf{Endpoints:}
+    \begin{itemize}[noitemsep]
+        \item \texttt{POST /api/cms/snapshot} -- Save draft
+        \item \texttt{POST /api/cms/publish} -- Publish article
+        \item \texttt{GET /api/cms/list} -- List articles
+        \item \texttt{GET /api/cms/show?slug=<slug>} -- Read article
+    \end{itemize}
+    \item \textbf{Authentication:} None (assumes private network or SSH tunneling). \textit{See Section 11 (Risks) for threat-model implications and mitigations.}
+\end{itemize}
+
+\subsubsection{Interface 3: Git Plumbing (Shell)}
+\begin{itemize}[noitemsep]
+    \item \textbf{Protocol:} Git CLI commands via \texttt{child\_process.spawn}
+    \item \textbf{Critical Commands:}
+    \begin{itemize}[noitemsep]
+        \item \texttt{git commit-tree} -- Create commits on empty trees
+        \item \texttt{git update-ref} -- Atomic ref updates
+        \item \texttt{git for-each-ref} -- List refs in namespace
+        \item \texttt{git cat-file} -- Read commit messages
+    \end{itemize}
+\end{itemize}
+
+\subsubsection{Interface 4: OS Keychain (Secrets)}
+\begin{itemize}[noitemsep]
+    \item \textbf{Platforms:}
+    \begin{itemize}[noitemsep]
+        \item macOS: \texttt{security} tool
+        \item Linux: \texttt{secret-tool} (GNOME Keyring)
+        \item Windows: \texttt{CredentialManager} (PowerShell)
+    \end{itemize}
+    \item \textbf{Purpose:} Store AES-256-GCM encryption keys for assets
+\end{itemize}
+
+\subsection{Scope Boundaries}
+
+\subsubsection{In Scope}
+\begin{itemize}[noitemsep]
+    \item Article drafting, editing, and publishing
+    \item Encrypted asset storage (images, PDFs)
+    \item Full version history via Git log
+    \item CLI and HTTP API access
+    \item Aspirational: Multi-runtime support (Node, Bun, Deno)
+\end{itemize}
+
+\subsubsection{Out of Scope}
+\begin{itemize}[noitemsep]
+    \item \textbf{User Authentication:} Delegated to git-stargate or SSH
+    \item \textbf{Search Indexing:} No full-text search (external indexer required)
+    \item \textbf{Media Transcoding:} Assets stored as-is
+    \item \textbf{Real-Time Collaboration:} No OT or CRDTs
+    \item \textbf{Analytics:} No built-in tracking
+\end{itemize}

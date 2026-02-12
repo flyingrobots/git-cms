@@ -9,7 +9,12 @@
   "scripts": {
     "serve": "node bin/git-cms.js serve",
     "dev": "docker compose up app",
+    "demo": "./scripts/demo.sh",
+    "quickstart": "./scripts/quickstart.sh",
+    "setup": "./scripts/setup.sh",
+    "check:deps": "node scripts/check-dependency-integrity.mjs",
     "test": "./test/run-docker.sh",
+    "test:setup": "./test/run-setup-tests.sh",
     "test:local": "vitest run",
     "test:e2e": "playwright test"
   },
@@ -18,6 +23,15 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/flyingrobots/git-cms.git"
+  },
+  "dependencies": {
+    "@git-stunts/alfred": "^0.10.3",
+    "@git-stunts/docker-guard": "^0.1.0",
+    "@git-stunts/git-cas": "^3.0.0",
+    "@git-stunts/git-warp": "^10.4.2",
+    "@git-stunts/plumbing": "^2.8.0",
+    "@git-stunts/trailer-codec": "^2.1.1",
+    "@git-stunts/vault": "^1.0.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.57.0",

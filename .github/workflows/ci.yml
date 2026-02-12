@@ -7,9 +7,39 @@ on:
     branches: [ main ]
 
 jobs:
+  dependency-guard:
+    name: Dependency Guard + Clean Install
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Verify Dependency Integrity (Pre-Install)
+        run: npm run check:deps
+
+      - name: Clean Install
+        run: npm ci
+
+      - name: Verify Dependency Integrity (Post-Install)
+        run: npm run check:deps
+
+      - name: Configure Git User
+        run: |
+          git config --global user.email "ci@git-cms.local"
+          git config --global user.name "CI Bot"
+          git config --global init.defaultBranch main
+
+      - name: Run Local Integration Tests
+        run: npm run test:local
+
   unit-test:
     name: Unit Tests (Docker)
     runs-on: ubuntu-latest
+    needs: dependency-guard
     steps:
       - uses: actions/checkout@v4
       
@@ -19,6 +49,7 @@ jobs:
   e2e-test:
     name: E2E Tests (Playwright)
     runs-on: ubuntu-latest
+    needs: dependency-guard
     container:
       image: mcr.microsoft.com/playwright:v1.57.0-jammy
     steps:
@@ -26,7 +57,7 @@ jobs:
       
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
       
       # Git is required in the container to perform plumbing operations during E2E tests

@@ -1,0 +1,24 @@
+\section{Quality Requirements}
+
+\subsection{Quality Tree}
+The primary quality attributes for Git CMS are prioritized as follows:
+\begin{enumerate}
+    \item \textbf{Security:} Cryptographic integrity and asset confidentiality.
+    \item \textbf{Simplicity:} Zero external database dependencies.
+    \item \textbf{Auditability:} Full provenance via Git's Merkle DAG.
+    \item \textbf{Performance:} Sub-second reads for standard blog workloads.
+\end{enumerate}
+
+\subsection{Quality Scenarios}
+
+\subsubsection{QS-1: Tamper Detection}
+\textbf{Scenario:} An attacker modifies a published article directly on the Git gateway. \\
+\textbf{Stimulus:} Malicious rewrite of Git history (\texttt{filter-branch}). \\
+\textbf{Response:} The Merkle DAG checksum mismatch is immediately detected by any client pulling the update. \\
+\textbf{Metric:} 100\% detection of unauthorized history rewrites.
+
+\subsubsection{QS-2: Confidentiality}
+\textbf{Scenario:} A repository mirror is compromised. \\
+\textbf{Stimulus:} Attacker attempts to view private image assets. \\
+\textbf{Response:} Only AES-256-GCM ciphertext is visible; plaintext remains unrecoverable without the client-side key. \\
+\textbf{Metric:} 0\% leakage of plaintext assets.

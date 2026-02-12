@@ -1,71 +1,111 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { execFileSync } from 'node:child_process';
-import { writeSnapshot, readTipMessage, listRefs, fastForwardPublished } from '../src/lib/git.js';
+import CmsService from '../src/lib/CmsService.js';
 
-function run(args, cwd) {
-  return execFileSync('git', args, { cwd, encoding: 'utf8' }).trim();
-}
-
-describe('Git CMS Core', () => {
+describe('CmsService (Integration)', () => {
   let cwd;
+  let cms;
+  const refPrefix = 'refs/cms';
 
   beforeEach(() => {
-    cwd = mkdtempSync(path.join(os.tmpdir(), 'git-cms-test-'));
-    run(['init'], cwd);
-    run(['config', 'user.name', 'Test'], cwd);
-    run(['config', 'user.email', 'test@example.com'], cwd);
+    cwd = mkdtempSync(path.join(os.tmpdir(), 'git-cms-service-test-'));
+    execFileSync('git', ['init'], { cwd });
+    execFileSync('git', ['config', 'user.name', 'Test'], { cwd });
+    execFileSync('git', ['config', 'user.email', 'test@example.com'], { cwd });
+    
+    cms = new CmsService({ cwd, refPrefix });
   });
 
   afterEach(() => {
     rmSync(cwd, { recursive: true, force: true });
   });
 
-  it('writes a snapshot to a new ref', () => {
+  it('saves a snapshot and reads it back', async () => {
     const slug = 'hello-world';
-    const message = 'Title\n\nBody content\n\nStatus: draft';
+    const title = 'Title';
+    const body = 'Body content';
     
-    const res = writeSnapshot({ slug, message, cwd, refPrefix: 'refs/cms' });
+    const res = await cms.saveSnapshot({ slug, title, body });
     
     expect(res.sha).toHaveLength(40);
-    expect(res.ref).toBe('refs/cms/articles/hello-world');
     
-    // Verify in git
-    const log = run(['show', '-s', '--format=%B', res.sha], cwd);
-    expect(log.trim()).toBe(message);
+    const article = await cms.readArticle({ slug });
+    expect(article.title).toBe(title);
+    expect(article.body).toBe(body + '\n');
+    expect(article.trailers.status).toBe('draft');
   });
 
-  it('updates an existing ref (history)', () => {
+  it('updates an existing article (history)', async () => {
     const slug = 'history-test';
     
-    const v1 = writeSnapshot({ slug, message: 'v1', cwd, refPrefix: 'refs/cms' });
-    const v2 = writeSnapshot({ slug, message: 'v2', cwd, refPrefix: 'refs/cms' });
+    const v1 = await cms.saveSnapshot({ slug, title: 'v1', body: 'b1' });
+    const v2 = await cms.saveSnapshot({ slug, title: 'v2', body: 'b2' });
     
     expect(v2.parent).toBe(v1.sha);
     
-    const tip = readTipMessage(slug, 'draft', { cwd, refPrefix: 'refs/cms' });
-    expect(tip.sha).toBe(v2.sha);
-    expect(tip.message).toBe('v2');
+    const article = await cms.readArticle({ slug });
+    expect(article.title).toBe('v2');
   });
 
-  it('lists refs', () => {
-    writeSnapshot({ slug: 'a', message: 'A', cwd, refPrefix: 'refs/cms' });
-    writeSnapshot({ slug: 'b', message: 'B', cwd, refPrefix: 'refs/cms' });
+  it('lists articles', async () => {
+    await cms.saveSnapshot({ slug: 'a', title: 'A', body: 'A' });
+    await cms.saveSnapshot({ slug: 'b', title: 'B', body: 'B' });
     
-    const list = listRefs('draft', { cwd, refPrefix: 'refs/cms' });
+    const list = await cms.listArticles();
     expect(list).toHaveLength(2);
     expect(list.map(i => i.slug).sort()).toEqual(['a', 'b']);
   });
 
-  it('publishes (fast-forward)', () => {
+  it('publishes an article', async () => {
     const slug = 'pub-test';
-    const { sha } = writeSnapshot({ slug, message: 'ready', cwd, refPrefix: 'refs/cms' });
+    const { sha } = await cms.saveSnapshot({ slug, title: 'ready', body: '...' });
     
-    fastForwardPublished(slug, sha, { cwd, refPrefix: 'refs/cms' });
+    await cms.publishArticle({ slug, sha });
     
-    const pubTip = readTipMessage(slug, 'published', { cwd, refPrefix: 'refs/cms' });
-    expect(pubTip.sha).toBe(sha);
+    const pubArticle = await cms.readArticle({ slug, kind: 'published' });
+    expect(pubArticle.sha).toBe(sha);
+  });
+
+  it('canonicalizes mixed-case slugs and stores contentId trailer', async () => {
+    await cms.saveSnapshot({ slug: 'Hello-World', title: 'Title', body: 'Body' });
+
+    const article = await cms.readArticle({ slug: 'hello-world' });
+    expect(article.trailers.contentid).toBe('hello-world');
+  });
+
+  it('rejects invalid slug format', async () => {
+    await expect(
+      cms.saveSnapshot({ slug: 'bad slug', title: 'Title', body: 'Body' })
+    ).rejects.toThrow(/slug must match/);
+  });
+
+  it('rejects reserved slug names', async () => {
+    await expect(
+      cms.saveSnapshot({ slug: 'api', title: 'Title', body: 'Body' })
+    ).rejects.toThrow(/slug "api" is reserved/);
+  });
+
+  it('rejects mismatched contentId trailers', async () => {
+    await expect(
+      cms.saveSnapshot({
+        slug: 'policy-test',
+        title: 'Title',
+        body: 'Body',
+        trailers: { contentId: 'another-id' },
+      })
+    ).rejects.toThrow(/must match canonical slug/);
+  });
+
+  it('propagates underlying git errors while listing', async () => {
+    const originalExecute = cms.plumbing.execute;
+    cms.plumbing.execute = async () => {
+      throw new Error('fatal: permission denied');
+    };
+
+    await expect(cms.listArticles()).rejects.toThrow('fatal: permission denied');
+    cms.plumbing.execute = originalExecute;
   });
 });
