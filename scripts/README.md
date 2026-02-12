@@ -16,6 +16,7 @@ Interactive menu for trying out git-cms in Docker. Checks prerequisites and guid
 - Cleaning up
 
 **Usage:**
+
 ```bash
 ./scripts/quickstart.sh
 ```
@@ -29,6 +30,7 @@ Automated demo that showcases the key features:
 - Exploring version history
 
 **Usage:**
+
 ```bash
 ./scripts/demo.sh
 ```
@@ -41,18 +43,19 @@ This is great for:
 ### `bootstrap-stargate.sh` (Advanced: Git Gateway)
 
 Creates a local "Stargate" gateway repository with Git hooks that enforce:
-- Fast-forward only updates (no force pushes)
+- Fast-forward-only updates (no force pushes)
 - Optional GPG signature verification
 - Mirroring to public repositories
 
 **Usage:**
+
 ```bash
 ./scripts/bootstrap-stargate.sh ~/git/_blog-stargate.git
 git remote add stargate ~/git/_blog-stargate.git
 git config remote.stargate.push "+refs/_blog/*:refs/_blog/*"
 ```
 
-See: https://github.com/flyingrobots/git-stargate
+See: [git-stargate](https://github.com/flyingrobots/git-stargate)
 
 ---
 
@@ -74,6 +77,7 @@ All scripts that interact with Git are designed to run in Docker containers to p
 Runs the full test suite in Docker. Called automatically by `npm test`.
 
 **Usage:**
+
 ```bash
 ./test/run-docker.sh
 # OR

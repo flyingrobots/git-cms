@@ -37,13 +37,16 @@ npm run setup
 
 ### Step 2: Try It Out
 
-**Option A: Watch the Demo (Recommended First Time)**
+#### Option A: Watch the Demo (Recommended First Time)
+
 ```bash
 npm run demo
 ```
+
 This shows you how git-cms works step-by-step.
 
-**Option B: Start the Server**
+#### Option B: Start the Server
+
 ```bash
 npm run dev
 # OR
@@ -57,7 +60,7 @@ docker compose up app
 
 ### Step 3: Open the Admin UI
 
-Open your browser to: **http://localhost:4638**
+Open your browser to: **[http://localhost:4638](http://localhost:4638)**
 
 You should see the Git CMS Admin interface with:
 - Sidebar showing "Articles" and "Published"
@@ -66,7 +69,7 @@ You should see the Git CMS Admin interface with:
 
 ### Step 4: Create Your First Article
 
-**Option A: Via the Web UI**
+#### Option A: Via the Web UI
 
 1. In the admin UI, enter:
    - **Slug:** `hello-world`
@@ -90,7 +93,7 @@ You should see the Git CMS Admin interface with:
    - This fast-forwards `refs/_blog/published/hello-world` to match the draft
    - The article is now "live"
 
-**Option B: Via the CLI (Inside Docker)**
+#### Option B: Via the CLI (Inside Docker)
 
 ```bash
 # Open a shell inside the running container
@@ -206,10 +209,12 @@ If you want to use git-cms as a command-line tool on your host machine, you can 
 ### Install Globally
 
 ```bash
-npm install -g git-cms
-# OR, from source:
+# From source (recommended until npm publish is complete):
 cd git-cms
 npm link
+
+# After publish, global install will work:
+# npm install -g git-cms
 ```
 
 ### Create a Dedicated Blog Repo
@@ -279,15 +284,18 @@ Article → Commit Message → git commit-tree → .git/objects/ → Git
 
 ### The Empty Tree Trick
 
-Every article commit points to Git's "empty tree" (`4b825dc642cb6eb9a060e54bf8d69288fbee4904`):
+Every article commit points to Git's "empty tree" object. In SHA-1 repos this is `4b825dc642cb6eb9a060e54bf8d69288fbee4904`, but in SHA-256 repos it is different.
 
 ```bash
+# Derive the empty-tree OID for this repository's object format
+git hash-object -t tree /dev/null
+
 # Traditional Git commit
 git add article.md          # Stage file
 git commit -m "Add article" # Commit references changed files
 
 # Git CMS commit
-git commit-tree 4b825dc... -m "Article content here" # No files touched!
+git commit-tree <empty-tree-oid> -m "Article content here" # No files touched!
 ```
 
 This means:
@@ -359,8 +367,10 @@ secret-tool store --label="Git CMS Dev Key" service git-cms-dev-enc-key
 # Inside Docker container
 docker compose exec app sh
 
-# Upload an encrypted file (if you've set up Vault)
-node bin/git-cms.js upload hello-world /path/to/image.png
+# Upload an encrypted file (base64 payload via HTTP API)
+curl -X POST http://localhost:4638/api/cms/upload \
+  -H "Content-Type: application/json" \
+  -d '{"slug":"hello-world","filename":"image.png","data":"<base64>"}'
 
 # The blob in Git is encrypted ciphertext
 # Only you (with the key) can decrypt it
@@ -372,11 +382,15 @@ node bin/git-cms.js upload hello-world /path/to/image.png
 
 ### "Permission denied" when running Docker
 
-**Solution:** Make sure Docker Desktop is running, or add your user to the `docker` group:
+**Solution:** Make sure Docker Desktop is running (macOS/Windows). On Linux, ensure the Docker daemon is running and your user has socket access (often via the `docker` group, distro-dependent):
+
 ```bash
+# Linux example (group name may vary by distro)
 sudo usermod -aG docker $USER
 # Log out and back in
 ```
+
+If group-based access is not configured, run Docker commands with `sudo` as a temporary workaround.
 
 ### "Port 4638 already in use"
 
@@ -431,7 +445,7 @@ Yes! Use the **git-stargate** gateway to:
 2. Verify GPG signatures
 3. Mirror to GitHub automatically
 
-See: https://github.com/flyingrobots/git-stargate
+See: [https://github.com/flyingrobots/git-stargate](https://github.com/flyingrobots/git-stargate)
 
 ### What about GDPR / right to be forgotten?
 
@@ -455,8 +469,8 @@ You're supposed to walk away thinking "I would never use this in production, but
 
 ## Getting Help
 
-- **Issues:** https://github.com/flyingrobots/git-cms/issues
-- **Blog Series:** https://flyingrobots.dev/posts/git-stunts
+- **Issues:** [https://github.com/flyingrobots/git-cms/issues](https://github.com/flyingrobots/git-cms/issues)
+- **Blog Series:** [https://flyingrobots.dev/posts/git-stunts](https://flyingrobots.dev/posts/git-stunts)
 - **ADR:** `docs/ADR.md` (comprehensive architecture docs)
 
 ---

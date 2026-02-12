@@ -1,61 +1,83 @@
-# Git CMS: Technical Repo Walkthrough
+# Git CMS Repository Walkthrough
 
-This document provides a top-to-bottom technical walkthrough of the Git CMS architecture, linking concepts to their implementation evidence in the codebase.
+Technical orientation for the current codebase architecture.
 
-## 1. Core Philosophy: The "Empty Tree" Database
-Instead of tracking files on disk, Git CMS treats the Git object store as a NoSQL-style graph database.
+---
 
-*   **Evidence:** `src/lib/git.js` defines the [EMPTY_TREE constant](https://github.com/clduab11/git-cms/blob/main/src/lib/git.js#L6) (`4b825dc642cb6eb9a060e54bf8d69288fbee4904`).
-*   **Implementation:** All content commits are generated using `commit-tree` against this empty tree OID, ensuring the "working tree" of these commits is always empty. See [writeSnapshot in src/lib/git.js](https://github.com/clduab11/git-cms/blob/main/src/lib/git.js#L54).
-*   **NOTE:**
-    > [!note]
-    > This architectural decision is not formally documented in the `docs/` folder; it is only described in the `README.md` and visible in the source code logic.
+## 1. Core Model
 
-## 2. Refspace Organization
-The CMS partitions the Git namespace to separate drafts, published content, and assets.
+Git CMS stores article state in Git commits and refs, not SQL tables.
 
-*   **Evidence:** The `refFor` helper in [src/lib/git.js](https://github.com/clduab11/git-cms/blob/main/src/lib/git.js#L18-L23) defines the structure:
-    *   `refs/_blog/articles/<slug>` (Drafts)
-    *   `refs/_blog/published/<slug>` (Published)
-    *   `refs/_blog/comments/<slug>` (Comments)
-*   **NOTE:**
-    > [!note]
-    > The specific schema for the `refs/_blog` namespace lacks documentation regarding collision prevention or migration strategies.
+- Entry point for orchestration: `src/lib/CmsService.js`
+- Draft ref pattern: `{refPrefix}/articles/{slug}`
+- Published ref pattern: `{refPrefix}/published/{slug}`
+- Default `refPrefix`: `refs/_blog/dev` (overridable via `CMS_REF_PREFIX`)
 
-## 3. Article Serialization (The "Commit Article" Format)
-Articles are stored entirely within Git commit messages using a header/body/trailer format.
+The service writes commit messages as content payloads and moves refs atomically with compare-and-swap semantics.
 
-*   **Evidence:** [src/lib/parse.js](https://github.com/clduab11/git-cms/blob/main/src/lib/parse.js) contains the logic for splitting the commit message into `title`, `body`, and `trailers`.
-*   **Evidence:** The CLI implementation in [bin/git-cms.js](https://github.com/clduab11/git-cms/blob/main/bin/git-cms.js#L17-L21) demonstrates the construction of this message.
+---
 
-## 4. Asset Management: Git-Native CAS
-Assets are handled via a Content Addressable Store (CAS) implemented using Git blobs and manifests.
+## 2. Composition Layer
 
-*   **Chunking Logic:** Files are split into 256KB chunks in [src/lib/chunks.js](https://github.com/clduab11/git-cms/blob/main/src/lib/chunks.js#L48).
-*   **Encryption:** AES-256-GCM encryption is applied if a key is resolved, seen in [encryptBuffer](https://github.com/clduab11/git-cms/blob/main/src/lib/chunks.js#L34).
-*   **Manifests:** The file structure is preserved in a `manifest.json` stored as a Git blob, which is then committed to a chunk-specific ref. See [chunkFileToRef](https://github.com/clduab11/git-cms/blob/main/src/lib/chunks.js#L48).
-*   **NOTE:**
-    > [!note]
-    > The chunking and encryption feature is complex but lacks a specification document describing the manifest JSON schema.
+`CmsService` composes the `@git-stunts/*` packages:
 
-## 5. Secret Management
-The project avoids plain-text secrets by integrating with OS-native keychains.
+- `@git-stunts/plumbing`: Git command execution and repository helpers
+- `@git-stunts/trailer-codec`: trailer parsing/encoding
+- `@git-stunts/git-warp`: commit graph primitives (`commitNode`, `showNode`)
+- `@git-stunts/git-cas`: chunked asset storage and retrieval
+- `@git-stunts/vault`: secret resolution for encryption keys
 
-*   **Implementation:** [src/lib/secrets.js](https://github.com/clduab11/git-cms/blob/main/src/lib/secrets.js) contains drivers for:
-    *   macOS `security`
-    *   Linux `secret-tool`
-    *   Windows `CredentialManager`
-*   **Usage:** Used by the CAS system to retrieve the `CHUNK_ENC_KEY` via [resolveSecret](https://github.com/clduab11/git-cms/blob/main/src/lib/secrets.js#L206).
+This replaced older in-repo helpers such as `src/lib/git.js`, `src/lib/parse.js`, `src/lib/chunks.js`, and `src/lib/secrets.js`.
 
-## 6. API and Admin UI
-The system provides a zero-dependency management interface.
+---
 
-*   **Server:** [src/server/index.js](https://github.com/clduab11/git-cms/blob/main/src/server/index.js) uses Node's `http` module to provide a REST API.
-*   **UI:** [public/index.html](https://github.com/clduab11/git-cms/blob/main/public/index.html) is a vanilla JS SPA that communicates with the `/api/cms` endpoints.
-*   **NOTE:**
-    > [!note]
-    > The REST API endpoints are not documented with an OpenAPI spec or similar reference.
+## 3. Interfaces
 
-## 7. Operational Environment
-*   **Configuration:** The project uses `GIT_CMS_REPO` to target the data repository. Evidence: [src/server/index.js](https://github.com/clduab11/git-cms/blob/main/src/server/index.js#L14).
-*   **Verification:** E2E tests in [test/e2e/admin.spec.js](https://github.com/clduab11/git-cms/blob/main/test/e2e/admin.spec.js) verify the full flow from draft creation to publishing.
+### CLI
+
+- File: `bin/git-cms.js`
+- Commands: `draft`, `publish`, `list`, `show`, `serve`
+- `draft` expects body from `stdin`
+
+### HTTP API
+
+- File: `src/server/index.js`
+- Endpoints: `/api/cms/snapshot`, `/api/cms/publish`, `/api/cms/list`, `/api/cms/show`, `/api/cms/upload`
+- Static UI served from `public/`
+
+### Admin UI
+
+- Files: `public/index.html`, `public/app.js`
+- Uses the HTTP API for article lifecycle operations
+
+---
+
+## 4. Testing Surface
+
+- Integration tests: `test/git.test.js`, `test/chunks.test.js`, `test/server.test.js`
+- Setup script tests: `test/setup.bats`
+- Docker test harness: `test/run-docker.sh`, `test/Dockerfile.bats`
+
+Key regressions covered include:
+
+- Ref-prefix correctness for chunk refs
+- Error propagation from Git plumbing
+- Symlink traversal hardening in static serving
+
+---
+
+## 5. Operational Docs
+
+- Main overview: `README.md`
+- Safety/testing operations: `TESTING_GUIDE.md`
+- Deep architecture decisions: `docs/ADR.md`
+- Detailed onboarding: `docs/GETTING_STARTED.md`
+- Planning/status docs: `ROADMAP.md`, `docs/operations/`
+
+---
+
+## 6. Repository Coordinates
+
+Canonical repository URL for this codebase:
+
+- <https://github.com/flyingrobots/git-cms>

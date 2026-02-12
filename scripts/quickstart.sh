@@ -55,7 +55,7 @@ echo "  4) View logs"
 echo "  5) Stop and clean up"
 echo "  6) Exit"
 echo ""
-read -p "Choose [1-6]: " choice
+read -r -p "Choose [1-6]: " choice
 
 case $choice in
   1)
@@ -67,6 +67,7 @@ case $choice in
     echo "Press Ctrl+C to stop the server."
     echo ""
     docker compose up app
+    exit 0
     ;;
   2)
     echo ""
@@ -93,6 +94,7 @@ case $choice in
     echo "📋 Viewing logs..."
     echo ""
     docker compose logs -f app
+    exit 0
     ;;
   5)
     echo ""

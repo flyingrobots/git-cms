@@ -13,7 +13,7 @@ echo "  2. Publishing it atomically"
 echo "  3. Viewing Git's perspective"
 echo "  4. Exploring version history"
 echo ""
-read -p "Press Enter to start..."
+read -r -p "Press Enter to start..."
 echo ""
 
 # Make sure we're in the right directory
@@ -23,7 +23,7 @@ if [ ! -f "package.json" ]; then
 fi
 
 # Check Docker
-if ! docker compose &> /dev/null; then
+if ! docker compose version > /dev/null 2>&1; then
   echo "❌ Docker Compose not available"
   exit 1
 fi
@@ -59,7 +59,7 @@ EOF
 echo ""
 echo "✅ Draft created!"
 echo ""
-read -p "Press Enter to continue..."
+read -r -p "Press Enter to continue..."
 echo ""
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -70,7 +70,7 @@ echo ""
 docker compose run --rm app sh -c 'node bin/git-cms.js list'
 
 echo ""
-read -p "Press Enter to continue..."
+read -r -p "Press Enter to continue..."
 echo ""
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -99,7 +99,7 @@ docker compose run --rm app sh -c 'git status --short'
 echo "    ^ Notice: No files changed! Everything is in .git/objects/"
 
 echo ""
-read -p "Press Enter to continue..."
+read -r -p "Press Enter to continue..."
 echo ""
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -121,7 +121,7 @@ echo ""
 echo "This is atomic, fast-forward only publishing."
 
 echo ""
-read -p "Press Enter to continue..."
+read -r -p "Press Enter to continue..."
 echo ""
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -153,7 +153,7 @@ echo "You can read ANY previous version with:"
 echo "  git show <commit-sha>"
 
 echo ""
-read -p "Press Enter to continue..."
+read -r -p "Press Enter to continue..."
 echo ""
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -170,10 +170,10 @@ echo "Each commit:"
 echo "  • Points to the empty tree (no files)"
 echo "  • Has a parent pointer (version history)"
 echo "  • Contains the article in its commit message"
-echo "  • Is cryptographically signed (SHA-1 hash)"
+echo "  • Is identified by a cryptographic object hash (SHA-1 in default mode)"
 
 echo ""
-read -p "Press Enter to continue..."
+read -r -p "Press Enter to continue..."
 echo ""
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

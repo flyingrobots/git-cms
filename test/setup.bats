@@ -3,13 +3,31 @@
 
 setup() {
   # Create a temporary test directory
-  export TEST_DIR="$(mktemp -d)"
-  export ORIGINAL_DIR="/code"
+  export TEST_DIR="$(mktemp -d 2>/dev/null || true)"
+  export ORIGINAL_DIR="${ORIGINAL_DIR:-$(pwd)}"
+
+  if [ -z "${TEST_DIR}" ] || [ ! -d "${TEST_DIR}" ]; then
+    echo "Failed to create TEST_DIR with mktemp -d" >&2
+    return 1
+  fi
+  if [ ! -w "${TEST_DIR}" ]; then
+    echo "TEST_DIR is not writable: ${TEST_DIR}" >&2
+    return 1
+  fi
 
   # Copy setup script to test directory
-  mkdir -p "$TEST_DIR/git-cms/scripts"
-  cp "$ORIGINAL_DIR/scripts/setup.sh" "$TEST_DIR/git-cms/scripts/setup.sh"
-  cp "$ORIGINAL_DIR/package.json" "$TEST_DIR/git-cms/package.json"
+  mkdir -p "$TEST_DIR/git-cms/scripts" || {
+    echo "Failed to create test scripts directory" >&2
+    return 1
+  }
+  cp "$ORIGINAL_DIR/scripts/setup.sh" "$TEST_DIR/git-cms/scripts/setup.sh" || {
+    echo "Failed to copy scripts/setup.sh from ORIGINAL_DIR=${ORIGINAL_DIR}" >&2
+    return 1
+  }
+  cp "$ORIGINAL_DIR/package.json" "$TEST_DIR/git-cms/package.json" || {
+    echo "Failed to copy package.json from ORIGINAL_DIR=${ORIGINAL_DIR}" >&2
+    return 1
+  }
 
   # Create mocks directory
   export PATH="$TEST_DIR/mocks:$PATH"
@@ -19,7 +37,20 @@ setup() {
 }
 
 teardown() {
-  rm -rf "$TEST_DIR"
+  if [ -z "${TEST_DIR:-}" ]; then
+    return 0
+  fi
+
+  case "$TEST_DIR" in
+    "/"|"."|"/root")
+      echo "Refusing unsafe TEST_DIR cleanup path: ${TEST_DIR}" >&2
+      return 1
+      ;;
+  esac
+
+  if [ -d "$TEST_DIR" ]; then
+    rm -rf -- "$TEST_DIR"
+  fi
 }
 
 # Helper: Create a mock Docker CLI that passes compose and daemon checks.
@@ -49,8 +80,9 @@ EOF
 }
 
 @test "setup checks for docker command" {
-  # Remove docker from PATH
-  export PATH="/usr/bin:/bin"
+  local mockbin="$TEST_DIR/mockbin-no-docker"
+  mkdir -p "$mockbin"
+  export PATH="$mockbin:/usr/bin:/bin"
 
   run bash scripts/setup.sh
   [ "$status" -eq 1 ]

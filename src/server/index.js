@@ -16,6 +16,7 @@ const CWD = process.env.GIT_CMS_REPO || process.cwd();
 const ENV = (process.env.GIT_CMS_ENV || 'dev').toLowerCase();
 const REF_PREFIX = process.env.CMS_REF_PREFIX || `refs/_blog/${ENV}`;
 const PUBLIC_DIR = path.resolve(__dirname, '../../public');
+const PUBLIC_DIR_REAL = fs.realpathSync(PUBLIC_DIR);
 
 // Initialize the core service
 const cms = new CmsService({ cwd: CWD, refPrefix: REF_PREFIX });
@@ -31,11 +32,12 @@ const MIME_TYPES = {
 };
 
 function serveStatic(req, res) {
-  let relativePath = req.url === '/' ? 'index.html' : req.url.split('?')[0];
-  const filePath = path.join(PUBLIC_DIR, relativePath);
+  const requestedPath = req.url === '/' ? '/index.html' : req.url.split('?')[0];
+  const relativePath = requestedPath.replace(/^\/+/, '');
+  const filePath = path.resolve(PUBLIC_DIR_REAL, relativePath);
 
   // Security: Prevent path traversal
-  if (!filePath.startsWith(PUBLIC_DIR)) {
+  if (filePath !== PUBLIC_DIR_REAL && !filePath.startsWith(`${PUBLIC_DIR_REAL}${path.sep}`)) {
     return false;
   }
 
@@ -43,10 +45,22 @@ function serveStatic(req, res) {
     return false;
   }
 
-  const ext = path.extname(filePath).toLowerCase();
+  let realFilePath;
+  try {
+    realFilePath = fs.realpathSync(filePath);
+  } catch {
+    return false;
+  }
+
+  // Security: Prevent symlink escapes outside the static root
+  if (realFilePath !== PUBLIC_DIR_REAL && !realFilePath.startsWith(`${PUBLIC_DIR_REAL}${path.sep}`)) {
+    return false;
+  }
+
+  const ext = path.extname(realFilePath).toLowerCase();
   const contentType = MIME_TYPES[ext] || 'application/octet-stream';
   res.writeHead(200, { 'Content-Type': contentType });
-  fs.createReadStream(filePath).pipe(res);
+  fs.createReadStream(realFilePath).pipe(res);
   return true;
 }
 
@@ -164,7 +178,11 @@ async function handler(req, res) {
             fs.writeFileSync(filePath, Buffer.from(data, 'base64'));
             
             const result = await cms.uploadAsset({ slug, filePath, filename });
-            const assetUrl = `/blog/${ENV}/assets/${slug}/${result.manifest.chunks[0].digest}`;
+            const firstChunk = result.manifest?.chunks?.[0];
+            if (!firstChunk?.digest) {
+              throw new Error('Upload manifest contains no chunks');
+            }
+            const assetUrl = `/blog/${ENV}/assets/${slug}/${firstChunk.digest}`;
             
             fs.rmSync(tmpDir, { recursive: true, force: true });
             return send(res, 200, { ...result, assetUrl });

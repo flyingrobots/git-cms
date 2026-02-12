@@ -9,7 +9,17 @@ git-cms-test-*/
 .obsidian/
 
 # LaTeX artifacts
-*.aux 
+*.aux
 *.log
 *.out
 *.toc
+*.synctex.gz
+*.fls
+*.fdb_latexmk
+*.bbl
+*.blg
+*.idx
+*.ind
+*.ilg
+*.lof
+*.lot

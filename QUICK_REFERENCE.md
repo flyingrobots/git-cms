@@ -1,237 +1,174 @@
 # Git CMS Quick Reference
 
-**One-page cheat sheet for Git CMS commands and concepts.**
+One-page cheat sheet for Git CMS commands and concepts.
 
 ---
 
-## 🚀 First Time Setup
+## First-Time Setup
 
 ```bash
 git clone https://github.com/flyingrobots/git-cms.git
 cd git-cms
-npm run setup  # Checks Docker and validates environment
-npm run demo   # See it work!
+npm run setup  # Validate Docker prerequisites
+npm run demo   # Watch a guided walkthrough
 ```
 
 ---
 
-## 📦 npm Commands
+## npm Commands
 
 | Command | Purpose |
 |---------|---------|
-| `npm run setup` | One-time setup (checks prerequisites) |
-| `npm run demo` | Automated demo with explanations |
-| `npm run quickstart` | Interactive menu |
-| `npm run dev` | Start HTTP server (http://localhost:4638) |
-| `npm test` | Run integration tests |
-| `npm run test:setup` | Run setup script tests (BATS) |
+| `npm run setup` | One-time environment validation |
+| `npm run demo` | Guided CLI + Git walkthrough |
+| `npm run quickstart` | Interactive Docker menu |
+| `npm run dev` | Start HTTP server ([http://localhost:4638](http://localhost:4638)) |
+| `npm run serve` | Start server directly with Node |
+| `npm test` | Run integration tests in Docker |
+| `npm run test:setup` | Run setup-script tests (BATS) |
+| `npm run test:local` | Run Vitest directly on host (advanced) |
 
 ---
 
-## 🔧 CLI Commands (Inside Container)
+## CLI Commands (Inside Container)
 
 ```bash
 # Enter container
 docker compose run --rm app sh
 
-# Draft an article
+# Draft an article (reads body from stdin)
 echo "# My Post" | node bin/git-cms.js draft my-slug "My Title"
 
-# List articles
+# List drafts
 node bin/git-cms.js list
-node bin/git-cms.js list --kind=published
 
-# Publish an article
+# Publish a draft
 node bin/git-cms.js publish my-slug
 
-# Read an article
+# Read article content
 node bin/git-cms.js show my-slug
+
+# Start HTTP API + Admin UI
+node bin/git-cms.js serve
 
 # Exit container
 exit
 ```
 
+`node bin/git-cms.js list` does not support `--kind`. Kind filtering is available in the HTTP API (`GET /api/cms/list?kind=published`).
+
 ---
 
-## 🎯 The Core Concept
+## Core Concept
 
 ### Traditional CMS
-```
-Article → Database Row → SQL Query
+
+```text
+Article -> Database Row -> SQL Query
 ```
 
 ### Git CMS
-```
-Article → Commit Message → git log
+
+```text
+Article -> Commit Message -> git log
 ```
 
-**The Trick:** Commits point to the "empty tree" so no files are changed.
+The trick: content lives in commit messages while commits point at the repo's empty tree object.
 
 ---
 
-## 📂 Key Refs (Git References)
+## Key Refs
 
-| Ref | Purpose |
-|-----|---------|
-| `refs/_blog/articles/<slug>` | Draft version (moves forward with each save) |
-| `refs/_blog/published/<slug>` | Published version (fast-forward only) |
-| `refs/_blog/chunks/<slug>@current` | Encrypted asset manifest |
+`refPrefix` defaults to `refs/_blog/dev` and is configurable via `CMS_REF_PREFIX`.
+
+| Ref Pattern | Purpose |
+|-------------|---------|
+| `{refPrefix}/articles/{slug}` | Draft pointer (moves on every save) |
+| `{refPrefix}/published/{slug}` | Published pointer (fast-forward only) |
+| `{refPrefix}/chunks/{slug}@current` | Current asset-manifest pointer |
 
 ---
 
-## 🔍 Inspecting with Git
+## Inspecting with Git
 
 ```bash
-# View all CMS refs
-git for-each-ref refs/_blog/
+# View all CMS refs for default dev namespace
+git for-each-ref refs/_blog/dev/
 
-# Read an article (it's just a commit message!)
-git log refs/_blog/articles/hello-world -1 --format="%B"
+# Read an article from commit message
+git log refs/_blog/dev/articles/hello-world -1 --format="%B"
 
-# See version history
-git log refs/_blog/articles/hello-world --oneline
+# View article history
+git log refs/_blog/dev/articles/hello-world --oneline
 
-# Check what tree the commit points to
-git log refs/_blog/articles/hello-world -1 --format="%T"
-# → 4b825dc... (the empty tree!)
-
-# View the DAG
-git log --all --graph --oneline refs/_blog/
+# Compute empty tree OID for this repo's object format
+git hash-object -t tree /dev/null
 ```
 
 ---
 
-## 🏗️ Architecture (Lego Blocks)
+## Architecture (Lego Blocks)
 
-```
+```text
 git-cms
-  └─ CmsService (orchestrator)
-       ├─ @git-stunts/plumbing (Git commands)
-       ├─ @git-stunts/trailer-codec (RFC 822 trailers)
-       ├─ @git-stunts/git-warp (commits on empty tree)
-       ├─ @git-stunts/git-cas (encrypted asset storage)
-       └─ @git-stunts/vault (OS keychain for secrets)
+  -> CmsService (orchestrator)
+     -> @git-stunts/plumbing (Git execution)
+     -> @git-stunts/trailer-codec (trailer encode/decode)
+     -> @git-stunts/git-warp (commit graph primitives)
+     -> @git-stunts/git-cas (asset chunk + manifest storage)
+     -> @git-stunts/vault (secret/key resolution)
 ```
 
 ---
 
-## 📄 Commit Message Format
+## Commit Message Shape
 
-```
+```text
 # My Article Title
 
 This is the article body.
 
 Status: draft
-Author: James Ross
+Author: Example Author
 Tags: git, cms
 Slug: my-article
 UpdatedAt: 2026-01-11T12:34:56Z
 ```
 
-**Trailers** (key-value pairs at end) are parsed by `@git-stunts/trailer-codec`.
+Trailers are parsed by `@git-stunts/trailer-codec`.
 
 ---
 
-## 🔐 Publishing Workflow
+## Troubleshooting
+
+### Cannot find module `@git-stunts/...`
 
 ```bash
-# Save draft (creates commit)
-echo "# Post" | git cms draft my-post "Title"
-→ refs/_blog/articles/my-post points to abc123
-
-# Publish (copies pointer)
-git cms publish my-post
-→ refs/_blog/published/my-post points to abc123
-
-# Edit (creates new commit)
-echo "# Updated" | git cms draft my-post "Title"
-→ refs/_blog/articles/my-post points to def456
-→ refs/_blog/published/my-post still points to abc123
-```
-
-Publishing is **atomic** and **fast-forward only**.
-
----
-
-## 🛡️ Safety
-
-**Everything runs in Docker by default.**
-
-- ✅ Your host Git repos are never touched
-- ✅ Tests run in isolated containers
-- ✅ Easy cleanup: `docker compose down -v`
-
-**Never** run `git cms` commands in repos you care about until you understand what's happening.
-
----
-
-## 📚 Documentation
-
-| File | Purpose |
-|------|---------|
-| `README.md` | Overview + quick start |
-| `TESTING_GUIDE.md` | How to test safely |
-| `docs/GETTING_STARTED.md` | Comprehensive walkthrough |
-| `docs/ADR.md` | **Architecture Decision Record** (deep dive) |
-| `test/README.md` | Test suite documentation |
-| `scripts/README.md` | Script documentation |
-| `QUICK_REFERENCE.md` | This file! |
-
----
-
-## 🐛 Troubleshooting
-
-### "Cannot find module '@git-stunts/...'"
-```bash
-npm ci
 npm run check:deps
+rm -rf node_modules
+npm ci
 ```
 
-### "Port 4638 already in use"
+### Port 4638 already in use
+
 Edit `docker-compose.yml`:
+
 ```yaml
 ports:
-  - "5000:4638"  # Use port 5000 instead
+  - "5000:4638"
 ```
 
-### "Docker daemon not running"
-Start Docker Desktop (macOS/Windows) or `sudo systemctl start docker` (Linux).
+### Docker daemon not running
+
+Start Docker Desktop (macOS/Windows) or start Docker service on Linux.
 
 ---
 
-## 🎓 Key Concepts to Understand
+## Docs Map
 
-1. **Empty Tree:** `4b825dc642cb6eb9a060e54bf8d69288fbee4904` is Git's canonical empty tree. All commits point here.
-
-2. **Trailers:** RFC 822 key-value pairs at end of commit messages (like `Signed-off-by` in Linux kernel).
-
-3. **Fast-Forward Only:** Published refs can only move forward in history, never rewrite.
-
-4. **Content Addressability:** Assets stored by SHA-1 hash, automatic deduplication.
-
-5. **Compare-and-Swap (CAS):** `git update-ref` is atomic at ref level, prevents concurrent write conflicts.
-
----
-
-## 💡 The "Linus Threshold"
-
-This project exists at the edge of technical sanity. It's designed to make you think:
-
-> "I would never use this in production, but now I understand Git way better."
-
-If you're considering production use:
-- Read `docs/ADR.md` cover to cover
-- Understand every tradeoff
-- Run in Docker for months
-- Ask yourself: "Would a database be better?" (probably yes)
-
-Then, if you're still convinced... **go for it!** Just don't say we didn't warn you. 😄
-
----
-
-## 🎉 Have Fun!
-
-This is a **thought experiment** that happens to work. Use it to learn, explore, and understand Git's plumbing from first principles.
-
-*"You know what? Have fun."* — Linus (probably)
+- `README.md`: overview + quick start
+- `TESTING_GUIDE.md`: safe test workflow
+- `docs/GETTING_STARTED.md`: full walkthrough
+- `docs/ADR.md`: architecture decision record
+- `scripts/README.md`: helper script docs
+- `test/README.md`: test suite docs

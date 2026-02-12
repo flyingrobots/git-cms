@@ -9,16 +9,18 @@ import { randomBytes } from 'node:crypto';
 describe('CmsService Assets (Integration)', () => {
   let cwd;
   let cms;
+  const refPrefix = 'refs/cms';
 
   beforeEach(() => {
     cwd = mkdtempSync(path.join(os.tmpdir(), 'git-cms-assets-test-'));
     execFileSync('git', ['init'], { cwd });
     execFileSync('git', ['config', 'user.name', 'Test'], { cwd });
     execFileSync('git', ['config', 'user.email', 'test@example.com'], { cwd });
-    cms = new CmsService({ cwd, refPrefix: 'refs/cms' });
+    cms = new CmsService({ cwd, refPrefix });
   });
 
   afterEach(() => {
+    delete process.env.CHUNK_ENC_KEY;
     rmSync(cwd, { recursive: true, force: true });
   });
 
@@ -36,7 +38,7 @@ describe('CmsService Assets (Integration)', () => {
     expect(result.manifest.chunks.length).toBeGreaterThan(0);
     
     // Verify ref exists
-    const resolved = execFileSync('git', ['rev-parse', 'refs/_blog/chunks/test-image@current'], { cwd, encoding: 'utf8' }).trim();
+    const resolved = execFileSync('git', ['rev-parse', `${refPrefix}/chunks/test-image@current`], { cwd, encoding: 'utf8' }).trim();
     expect(resolved).toBe(result.commitSha);
   });
 
@@ -59,6 +61,5 @@ describe('CmsService Assets (Integration)', () => {
     const blobContent = execFileSync('git', ['cat-file', '-p', blobOid], { cwd, encoding: 'utf8' });
     expect(blobContent).not.toContain('Top Secret');
     
-    delete process.env.CHUNK_ENC_KEY;
   });
 });

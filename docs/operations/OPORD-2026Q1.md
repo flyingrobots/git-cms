@@ -1,6 +1,6 @@
-UNCLASSIFIED
+# UNCLASSIFIED
 
-# OPORD Packet: git-cms (2026Q1)
+## OPORD Packet: git-cms (2026Q1)
 
 - Effective Date: 2026-02-11
 - Campaign Intent: Move `git-cms` from prototype-stable to release-grade baseline.

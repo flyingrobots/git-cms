@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { execFileSync } from 'node:child_process';
@@ -9,6 +9,10 @@ describe('Server API (Integration)', () => {
   let cwd;
   let server;
   let baseUrl;
+  let leakedFilePath;
+  let symlinkPath;
+  let previousRepoEnv;
+  let previousPortEnv;
 
   beforeAll(async () => {
     cwd = mkdtempSync(path.join(os.tmpdir(), 'git-cms-server-api-test-'));
@@ -16,8 +20,10 @@ describe('Server API (Integration)', () => {
     execFileSync('git', ['config', 'user.name', 'Test'], { cwd });
     execFileSync('git', ['config', 'user.email', 'test@example.com'], { cwd });
 
+    previousRepoEnv = process.env.GIT_CMS_REPO;
+    previousPortEnv = process.env.PORT;
     process.env.GIT_CMS_REPO = cwd;
-    process.env.PORT = '0'; 
+    process.env.PORT = '0';
     
     server = startServer();
     
@@ -28,11 +34,36 @@ describe('Server API (Integration)', () => {
     
     const port = server.address().port;
     baseUrl = `http://localhost:${port}`;
+
+    const publicDir = path.resolve(process.cwd(), 'public');
+    leakedFilePath = path.join(os.tmpdir(), `git-cms-secret-${Date.now()}.txt`);
+    symlinkPath = path.join(publicDir, '_test-secret-link.txt');
+    writeFileSync(leakedFilePath, 'TOP_SECRET_CONTENT');
+    try {
+      unlinkSync(symlinkPath);
+    } catch {}
+    symlinkSync(leakedFilePath, symlinkPath);
   });
 
   afterAll(async () => {
     if (server) {
       await new Promise(resolve => server.close(resolve));
+    }
+    try {
+      unlinkSync(symlinkPath);
+    } catch {}
+    if (leakedFilePath) {
+      rmSync(leakedFilePath, { force: true });
+    }
+    if (previousRepoEnv === undefined) {
+      delete process.env.GIT_CMS_REPO;
+    } else {
+      process.env.GIT_CMS_REPO = previousRepoEnv;
+    }
+    if (previousPortEnv === undefined) {
+      delete process.env.PORT;
+    } else {
+      process.env.PORT = previousPortEnv;
     }
     rmSync(cwd, { recursive: true, force: true });
   });
@@ -47,6 +78,7 @@ describe('Server API (Integration)', () => {
   it('creates a snapshot via POST', async () => {
     const res = await fetch(`${baseUrl}/api/cms/snapshot`, {
       method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ 
         slug: 'api-test', 
         title: 'API Title', 
@@ -61,6 +93,7 @@ describe('Server API (Integration)', () => {
   it('rejects invalid slugs with 400', async () => {
     const res = await fetch(`${baseUrl}/api/cms/snapshot`, {
       method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         slug: 'bad slug',
         title: 'Nope',
@@ -76,6 +109,7 @@ describe('Server API (Integration)', () => {
   it('canonicalizes mixed-case slugs across API ingress', async () => {
     const createRes = await fetch(`${baseUrl}/api/cms/snapshot`, {
       method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         slug: 'Api-Mixed',
         title: 'API Canonical',
@@ -89,5 +123,10 @@ describe('Server API (Integration)', () => {
     expect(readRes.status).toBe(200);
     expect(article.title).toBe('API Canonical');
     expect(article.trailers.contentid).toBe('api-mixed');
+  });
+
+  it('does not serve symlinked files outside public directory', async () => {
+    const res = await fetch(`${baseUrl}/_test-secret-link.txt`);
+    expect(res.status).toBe(404);
   });
 });

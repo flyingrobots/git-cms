@@ -98,4 +98,14 @@ describe('CmsService (Integration)', () => {
       })
     ).rejects.toThrow(/must match canonical slug/);
   });
+
+  it('propagates underlying git errors while listing', async () => {
+    const originalExecute = cms.plumbing.execute;
+    cms.plumbing.execute = async () => {
+      throw new Error('fatal: permission denied');
+    };
+
+    await expect(cms.listArticles()).rejects.toThrow('fatal: permission denied');
+    cms.plumbing.execute = originalExecute;
+  });
 });

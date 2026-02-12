@@ -3,10 +3,12 @@
 import CmsService from '../src/lib/CmsService.js';
 import { canonicalizeSlug } from '../src/lib/ContentIdentityPolicy.js';
 
+const DEFAULT_REF_PREFIX = 'refs/_blog/dev';
+
 async function main() {
   const [,, cmd, ...args] = process.argv;
   const cwd = process.cwd();
-  const refPrefix = process.env.CMS_REF_PREFIX || 'refs/_blog/dev';
+  const refPrefix = process.env.CMS_REF_PREFIX || DEFAULT_REF_PREFIX;
 
   const cms = new CmsService({ cwd, refPrefix });
 
@@ -36,8 +38,10 @@ async function main() {
       }
       case 'list': {
         const items = await cms.listArticles();
-        if (items.length === 0) console.log("No articles found.");
-        items.forEach(i => console.log(`- ${i.slug}: ${i.sha}`));
+        if (items.length === 0) console.log('No articles found');
+        for (const item of items) {
+          console.log(`- ${item.slug}: ${item.sha}`);
+        }
         break;
       }
       case 'show': {
@@ -50,7 +54,11 @@ async function main() {
       }
       case 'serve': {
         const { startServer } = await import('../src/server/index.js');
-        startServer();
+        const server = startServer();
+        server.on('error', (err) => {
+          console.error(`Server error: ${err.message}`);
+          process.exit(1);
+        });
         break;
       }
       default:
@@ -63,4 +71,7 @@ async function main() {
   }
 }
 
-main();
+main().catch((err) => {
+  console.error(`Error: ${err.message}`);
+  process.exit(1);
+});

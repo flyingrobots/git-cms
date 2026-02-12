@@ -13,6 +13,7 @@ Tests the `scripts/setup.sh` script to ensure it:
 - Provides helpful error messages
 
 **Run:**
+
 ```bash
 npm run test:setup
 ```
@@ -41,6 +42,7 @@ Tests the core CMS functionality:
 - Git plumbing operations
 
 **Run:**
+
 ```bash
 npm test
 # OR
@@ -61,6 +63,7 @@ Tests the web UI end-to-end:
 - Error handling
 
 **Run:**
+
 ```bash
 npm run test:e2e
 ```
@@ -86,7 +89,7 @@ npm run test:e2e    # E2E tests
 ### Adding BATS Tests
 
 1. Create or edit `test/setup.bats` (or create new `*.bats` files)
-2. Follow BATS syntax:
+1. Follow BATS syntax:
 
 ```bash
 @test "description of what this tests" {
@@ -96,12 +99,12 @@ npm run test:e2e    # E2E tests
 }
 ```
 
-3. Run tests: `npm run test:setup`
+1. Run tests: `npm run test:setup`
 
 ### Adding Integration Tests
 
 1. Create or edit `test/*.test.js`
-2. Use Vitest syntax:
+1. Use Vitest syntax:
 
 ```javascript
 import { describe, it, expect } from 'vitest';
@@ -113,7 +116,7 @@ describe('Feature', () => {
 });
 ```
 
-3. Run tests: `npm test`
+1. Run tests: `npm test`
 
 ---
 
@@ -226,6 +229,6 @@ All tests run in Docker to ensure:
 
 ## More Info
 
-- **BATS Documentation:** https://bats-core.readthedocs.io/
-- **Vitest Documentation:** https://vitest.dev/
-- **Playwright Documentation:** https://playwright.dev/
+- **BATS Documentation:** [bats-core.readthedocs.io](https://bats-core.readthedocs.io/)
+- **Vitest Documentation:** [vitest.dev](https://vitest.dev/)
+- **Playwright Documentation:** [playwright.dev](https://playwright.dev/)

@@ -9,26 +9,31 @@ The fundamental innovation: \texttt{git push} becomes the API endpoint.
 \subsection{Fundamental Requirements}
 
 \subsubsection{FR-1: Zero-Database Architecture}
+\label{fr:zero-database}
 The system MUST NOT depend on external database systems (SQL, NoSQL, or key-value stores). All persistent state resides within Git's native object store (\texttt{.git/objects}).
 
 \textbf{Rationale:} Eliminates operational complexity, deployment dependencies, and schema migration challenges inherent to traditional database-backed CMSs.
 
 \subsubsection{FR-2: Cryptographic Verifiability}
-Every content mutation MUST be recorded as a Git commit with cryptographic integrity guarantees via SHA-1 hashing (with optional GPG signing for non-repudiation).
+\label{fr:crypto-verify}
+Every content mutation MUST be recorded as a Git commit with cryptographic integrity guarantees via Git object hashing (SHA-1 in default mode; SHA-256 in SHA-256 repositories) and optional GPG signing for non-repudiation. SHA-1 collision weaknesses are acknowledged; migration to SHA-256 object format is the target state as tooling matures.
 
 \textbf{Rationale:} Provides immutable audit trails and tamper detection without additional infrastructure.
 
 \subsubsection{FR-3: Fast-Forward Only Publishing}
+\label{fr:fast-forward-publish}
 The publish operation MUST enforce strict linear history (fast-forward only) to prevent rewriting published content.
 
 \textbf{Rationale:} Guarantees provenance and prevents content manipulation after publication.
 
 \subsubsection{FR-4: Client-Side Encryption}
+\label{fr:client-encryption}
 All uploaded assets MUST be encrypted client-side (AES-256-GCM) before touching the repository.
 
 \textbf{Rationale:} Achieves row-level security without database-level access controls. The Git gateway receives only opaque encrypted blobs.
 
 \subsubsection{FR-5: Infinite Point-in-Time Recovery}
+\label{fr:infinite-recovery}
 Users MUST be able to access any historical version of any article without data loss.
 
 \textbf{Rationale:} Git's DAG structure provides this naturally; the CMS simply exposes it as a first-class feature.

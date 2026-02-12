@@ -16,9 +16,10 @@
 
 ## Blocking Graph
 
-```
+```text
 PP1, PP2 → PP3 → PP4
-M1.1 (Content ID + State Machine) → PD1 → (PD2, PD3)
+M1.1 (Content ID) → PD1 → (PD2, PD3)
+M1.2 (Draft/Published state machine + transitions) → PD1 → (PD2, PD3)
 CM1 → UX3
 CM2 → PD3
 CE2 → (UX1, CE3)
@@ -255,7 +256,7 @@ INF3 (UI Redesign) ideally after M1.1
   - Failure: unknown type.
   - Edges: type change.
   - Stress: many items.
-- **Def of Done:** Documented type model; backward compatible default type.
+- **Def of Done:** Documented type model; backward-compatible default type.
 - **Blocking:** PD3
 - **Blocked By:** CM1, M1.1
 
@@ -378,7 +379,7 @@ INF3 (UI Redesign) ideally after M1.1
   - Golden: schedule soon.
   - Failure: system clock skew.
   - Edges: DST.
-  - Stress: lots of schedules.
+  - Stress: many schedules.
 - **Def of Done:** Deterministic behavior; tests use fake timers.
 - **Blocking:** "Real CMS" vibes
 - **Blocked By:** PD1

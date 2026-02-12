@@ -27,6 +27,12 @@ jobs:
       - name: Verify Dependency Integrity (Post-Install)
         run: npm run check:deps
 
+      - name: Configure Git User
+        run: |
+          git config --global user.email "ci@git-cms.local"
+          git config --global user.name "CI Bot"
+          git config --global init.defaultBranch main
+
       - name: Run Local Integration Tests
         run: npm run test:local
 

@@ -26,7 +26,7 @@ npm run dev          # Start server
 
 Only this repository is required:
 
-```
+```text
 ~/git/
   └── git-cms/           ← This repository
 ```
@@ -50,7 +50,8 @@ npm run setup
 - Confirms the npm-package dependency model (no sibling repo required)
 
 After setup, your structure will be:
-```
+
+```text
 ~/git/
   └── git-cms/       ← You are here
 ```
@@ -62,6 +63,7 @@ After setup, your structure will be:
 - **Windows:** [Docker Desktop](https://docs.docker.com/desktop/install/windows-install/)
 
 Verify Docker is working:
+
 ```bash
 docker --version
 docker compose version
@@ -136,7 +138,7 @@ npm run dev
 docker compose up app
 ```
 
-Open your browser to: **http://localhost:4638**
+Open your browser to: **[http://localhost:4638](http://localhost:4638)**
 
 **What it does:**
 - Starts Node.js HTTP server in Docker
@@ -149,6 +151,7 @@ Open your browser to: **http://localhost:4638**
 - No risk to your local repositories
 
 **To clean up:**
+
 ```bash
 docker compose down -v  # Removes container and volumes
 ```
@@ -286,15 +289,19 @@ cd git-cms && npm unlink
 **Cause:** npm dependencies were not installed correctly, or lockfile integrity regressed.
 
 **Solution:**
+
 ```bash
 # Validate lockfile/package integrity
 npm run check:deps
 
-# Reinstall cleanly
+# Reinstall dependencies cleanly (host)
 rm -rf node_modules
 npm ci
 
-# Rebuild Docker images
+# If you're troubleshooting inside Docker, reinstall there too:
+# docker compose run --rm app sh -c "npm ci"
+
+# Last resort (only when lockfile/base image changed): rebuild images
 docker compose build --no-cache
 ```
 

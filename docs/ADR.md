@@ -24,7 +24,7 @@ The system MUST NOT depend on external database systems (SQL, NoSQL, or key-valu
 **Rationale:** Eliminates operational complexity, deployment dependencies, and schema migration challenges inherent to traditional database-backed CMSs.
 
 #### FR-2: Cryptographic Verifiability
-Every content mutation MUST be recorded as a Git commit with cryptographic integrity guarantees via SHA-1 hashing (with optional GPG signing for non-repudiation).
+Every content mutation MUST be recorded as a Git commit with cryptographic integrity guarantees via Git object hashing (SHA-1 in default object-format mode, with optional GPG signing for non-repudiation).
 
 **Rationale:** Provides immutable audit trails and tamper detection without additional infrastructure.
 
@@ -69,7 +69,7 @@ This system is **intentionally NOT designed for**:
 ### Technical Constraints
 
 #### TC-1: Git's Content Addressability Model
-Git uses SHA-1 hashing for object addressing. While SHA-1 has known collision vulnerabilities, Git is transitioning to SHA-256. The system assumes SHA-1 is "good enough" for content addressing (not for security-critical signing).
+Git uses object-format-dependent hashing for object addressing (SHA-1 in default mode; SHA-256 in SHA-256 repos). While SHA-1 has known collision vulnerabilities, Git is transitioning to SHA-256. This ADR currently documents behavior assuming default SHA-1 object format unless explicitly stated otherwise.
 
 **Mitigation:** Use GPG signing (`CMS_SIGN=1`) for cryptographic non-repudiation.
 
@@ -156,7 +156,7 @@ graph TB
   - `POST /api/cms/publish` – Publish article
   - `GET /api/cms/list` – List articles
   - `GET /api/cms/show?slug=<slug>` – Read article
-- **Authentication:** None (assumes private network or SSH tunneling)
+- **Authentication:** None in core service (local/trusted network assumption). Deployments should add network controls and authenticated gateways for write endpoints.
 
 #### Interface 3: Git Plumbing (Shell)
 - **Protocol:** Git CLI commands via `child_process.spawn`
@@ -206,7 +206,7 @@ The domain layer (`CmsService`) depends on abstractions (`GitPlumbing`, `Trailer
 **Benefit:** Decouples domain logic from infrastructure concerns.
 
 #### P-3: Content Addressability
-Assets are stored by their SHA-1 hash, enabling automatic deduplication. If two articles reference the same image, it's stored once.
+Assets are stored by object hash, enabling automatic deduplication. In SHA-1 object-format mode this is a SHA-1 hash; in SHA-256 mode it is SHA-256.
 
 **Benefit:** Reduces repository bloat.
 
@@ -221,7 +221,7 @@ Every operation produces a cryptographically signed commit (when `CMS_SIGN=1`). 
 Traditional CMSs store content in database rows. Git is designed to track *files*, not arbitrary data. Storing blog posts as files (e.g., `posts/hello-world.md`) clutters the working directory and causes merge conflicts.
 
 #### The Solution
-Store content as **commit messages on empty trees**, not as files. Every article is a commit that points to the well-known empty tree (`4b825dc642cb6eb9a060e54bf8d69288fbee4904`).
+Store content as **commit messages on empty trees**, not as files. Every article is a commit that points to the empty tree object for the repository object format (`4b825dc642cb6eb9a060e54bf8d69288fbee4904` in SHA-1 mode).
 
 **How It Works:**
 1. Encode the article (title, body, metadata) into a Git commit message using RFC 822 trailers.
@@ -307,7 +307,7 @@ graph TD
     style Vault fill:#fff4e1
 ```
 
-### Level 2: Lego Block Responsibilities
+### Level 2: Lego Block APIs
 
 ```mermaid
 graph LR
@@ -691,7 +691,7 @@ sequenceDiagram
     GitPlumbing-->>CAS: tree123...
     CAS-->>CmsService: tree123...
 
-    CmsService->>GitPlumbing: updateRef('refs/_blog/chunks/hello-world@current', ...)
+    CmsService->>GitPlumbing: updateRef('{refPrefix}/chunks/hello-world@current', ...)
     GitPlumbing->>Git: git update-ref
     Git-->>GitPlumbing: OK
     GitPlumbing-->>CmsService: OK
@@ -868,7 +868,7 @@ graph TB
     end
 
     subgraph "Docker Container (app)"
-        NodeApp[Node.js 20<br/>git-cms HTTP Server]
+        NodeApp[Node.js 22<br/>git-cms HTTP Server]
         GitBin[Git CLI<br/>Plumbing Commands]
         Repo[/app/.git/<br/>In-Container Repo]
 
@@ -1023,7 +1023,7 @@ graph LR
 
 **Problem:** Prevent concurrent writes from corrupting refs.
 
-**Solution:** Use `git update-ref --stdin` with expected old value:
+**Solution:** Use `git update-ref <ref> <newSHA> <expectedOldSHA>` for compare-and-swap semantics:
 
 ```bash
 git update-ref refs/_blog/articles/hello-world <newSHA> <expectedOldSHA>
@@ -1031,7 +1031,7 @@ git update-ref refs/_blog/articles/hello-world <newSHA> <expectedOldSHA>
 
 If `expectedOldSHA` doesn't match, Git returns exit code 1.
 
-**Implementation:** `src/lib/CmsService.js:95`
+**Implementation:** `src/lib/CmsService.js` (`CmsService.updateRef` via `GitRepositoryService.updateRef`)
 
 ```javascript
 await this.repo.updateRef({ ref, newSha, oldSha: parentSha });
@@ -1193,7 +1193,7 @@ const MAX_TRAILER_VALUE_LENGTH = 10_000;
 | **Published** | Article visible to readers. |
 | **Snapshot** | A single version in the article's history. |
 | **Trailer** | Key-value metadata (e.g., `Status: draft`). |
-| **Empty Tree** | Git's canonical empty tree (`4b825dc...`). |
+| **Empty Tree** | Git's canonical empty tree (SHA-1 mode: `4b825dc...`; use `git hash-object -t tree /dev/null` for the active object format). |
 | **Lego Block** | Independent `@git-stunts/*` module. |
 
 ---
@@ -1327,7 +1327,7 @@ const MAX_TRAILER_VALUE_LENGTH = 10_000;
 ```
 git-cms Quality
 ├── Security (Critical)
-│   ├── Cryptographic Integrity (SHA-1, GPG)
+│   ├── Cryptographic Integrity (Object Hash + GPG)
 │   ├── Client-Side Encryption (AES-256-GCM)
 │   └── DoS Protection (Trailer limits)
 ├── Simplicity (High)
@@ -1353,7 +1353,7 @@ git-cms Quality
 
 **Stimulus:** Malicious `git filter-branch` rewriting history.
 
-**Response:** Readers detect tampered commits via SHA-1 mismatch.
+**Response:** Readers detect tampered commits via object-hash and ref-history mismatch.
 
 **Metric:** 100% tamper detection (via Merkle DAG).
 
@@ -1380,8 +1380,10 @@ git pull
 
 **Test:**
 ```bash
-# Upload encrypted asset
-git cms upload --encrypt hero.png
+# Upload encrypted asset via HTTP API
+curl -X POST http://localhost:4638/api/cms/upload \
+  -H 'Content-Type: application/json' \
+  -d '{"slug":"hello-world","filename":"hero.png","data":"<base64>"}'
 # Admin views blob
 git cat-file blob abc123...
 # Output: Binary garbage (AES-256-GCM ciphertext)
@@ -1561,7 +1563,7 @@ git cms publish my-post &
 
 **Bare Repository:** A Git repository without a working directory (only `.git/` contents). Used for servers/gateways.
 
-**Blob:** A Git object type storing raw file content. Identified by SHA-1 hash of content.
+**Blob:** A Git object type storing raw file content. Identified by object-format hash of content (SHA-1 default, SHA-256 in SHA-256 repos).
 
 ### C
 
@@ -1583,7 +1585,7 @@ git cms publish my-post &
 
 ### E
 
-**Empty Tree:** Git's canonical empty tree object (`4b825dc642cb6eb9a060e54bf8d69288fbee4904`). Points to no files.
+**Empty Tree:** Git's canonical empty tree object. In SHA-1 mode: `4b825dc642cb6eb9a060e54bf8d69288fbee4904`; for other formats compute with `git hash-object -t tree /dev/null`.
 
 **Event Sourcing:** An architectural pattern where state changes are stored as a sequence of events. Git commits are events.
 
@@ -1627,7 +1629,7 @@ git cms publish my-post &
 
 ### O
 
-**OID (Object Identifier):** Git's SHA-1 hash of an object (commit, tree, blob, tag).
+**OID (Object Identifier):** Git's object-format hash of an object (commit, tree, blob, tag). SHA-1 in default mode, SHA-256 in SHA-256 repos.
 
 **Orphan Branch:** A Git branch with no parent commits (disconnected from main history).
 
@@ -1649,7 +1651,7 @@ git cms publish my-post &
 
 ### S
 
-**SHA-1:** Secure Hash Algorithm 1. Produces 160-bit (40-character hex) hashes. Used by Git for object IDs.
+**SHA-1:** Secure Hash Algorithm 1. Produces 160-bit (40-character hex) hashes. It remains common in Git, but SHA-256 mode is the migration target.
 
 **SHA-256:** Secure Hash Algorithm 2 (256-bit variant). Git's future default.
 
@@ -1692,7 +1694,7 @@ git cms list
 
 ### List All Published
 ```bash
-git cms list --kind=published
+curl "http://localhost:4638/api/cms/list?kind=published"
 ```
 
 ### Read an Article
@@ -1702,7 +1704,9 @@ git cms show hello-world
 
 ### Upload Encrypted Asset
 ```bash
-git cms upload hello-world hero.png
+curl -X POST http://localhost:4638/api/cms/upload \
+  -H 'Content-Type: application/json' \
+  -d '{"slug":"hello-world","filename":"hero.png","data":"<base64>"}'
 ```
 
 ### Start HTTP Server
@@ -1748,11 +1752,13 @@ git-cms/
 ## Appendix C: Related Projects
 
 ### git-stargate
-**URL:** https://github.com/flyingrobots/git-stargate
+
+**URL:** [https://github.com/flyingrobots/git-stargate](https://github.com/flyingrobots/git-stargate)
 **Purpose:** Git gateway enforcing fast-forward only, GPG signing, and public mirroring.
 
 ### git-stunts (Lego Blocks)
-**URL:** https://github.com/flyingrobots/git-stunts
+
+**URL:** [https://github.com/flyingrobots/git-stunts](https://github.com/flyingrobots/git-stunts)
 **Modules:**
 - `@git-stunts/plumbing` – Low-level Git protocol wrapper
 - `@git-stunts/trailer-codec` – RFC 822 trailer parser
@@ -1764,12 +1770,12 @@ git-cms/
 
 ## Appendix D: References
 
-1. **Git Internals (Pro Git Book):** https://git-scm.com/book/en/v2/Git-Internals-Plumbing-and-Porcelain
-2. **RFC 822 (Internet Message Format):** https://tools.ietf.org/html/rfc822
-3. **Git Trailers Documentation:** https://git-scm.com/docs/git-interpret-trailers
-4. **AES-GCM (NIST SP 800-38D):** https://csrc.nist.gov/publications/detail/sp/800-38d/final
-5. **Event Sourcing (Martin Fowler):** https://martinfowler.com/eaaDev/EventSourcing.html
-6. **Hexagonal Architecture:** https://alistair.cockburn.us/hexagonal-architecture/
+1. **Git Internals (Pro Git Book):** [https://git-scm.com/book/en/v2/Git-Internals-Plumbing-and-Porcelain](https://git-scm.com/book/en/v2/Git-Internals-Plumbing-and-Porcelain)
+2. **RFC 5322 (Internet Message Format):** [https://tools.ietf.org/html/rfc5322](https://tools.ietf.org/html/rfc5322)
+3. **Git Trailers Documentation:** [https://git-scm.com/docs/git-interpret-trailers](https://git-scm.com/docs/git-interpret-trailers)
+4. **AES-GCM (NIST SP 800-38D):** [https://csrc.nist.gov/publications/detail/sp/800-38d/final](https://csrc.nist.gov/publications/detail/sp/800-38d/final)
+5. **Event Sourcing (Martin Fowler):** [https://martinfowler.com/eaaDev/EventSourcing.html](https://martinfowler.com/eaaDev/EventSourcing.html)
+6. **Hexagonal Architecture:** [https://alistair.cockburn.us/hexagonal-architecture/](https://alistair.cockburn.us/hexagonal-architecture/)
 
 ---
 

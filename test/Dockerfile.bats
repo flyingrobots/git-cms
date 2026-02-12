@@ -1,8 +1,8 @@
 # Dockerfile for running BATS tests
-FROM bats/bats:latest
+FROM bats/bats:1.12.0
 
 # Install additional tools needed for testing
-RUN apk add --no-cache bash git
+RUN apk add --no-cache bash=~5.2 git=~2.47
 
 WORKDIR /code
 

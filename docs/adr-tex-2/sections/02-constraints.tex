@@ -32,14 +32,14 @@ Git's immutability conflicts with GDPR's ``right to be forgotten.'' Deleting a c
 \textbf{RC-2: Cryptographic Export Restrictions} \\
 AES-256-GCM encryption may face export restrictions in certain jurisdictions.
 
-\textbf{Mitigation:} The \texttt{@git-stunts/vault} module uses Node's built-in \texttt{crypto} module, which is widely available.
+\textbf{Mitigation:} Encryption is optional and can be disabled in restricted jurisdictions. When enabled via \texttt{@git-stunts/vault}, deployments should follow legal counsel, jurisdiction-specific distribution policy, and organizational export-control requirements.
 
 \subsection{Operational Constraints}
 
 \textbf{OC-1: Single-Writer Assumption} \\
 Git's ref updates are atomic \textit{locally} but not across distributed clones. Concurrent writes to the same ref can cause conflicts.
 
-\textbf{Mitigation:} Use \textbf{git-stargate} (a companion project) to enforce serialized writes via SSH.
+\textbf{Mitigation:} Use \textbf{git-stargate}\footnote{\url{https://github.com/flyingrobots/git-stargate}} to enforce serialized writes via SSH.
 
 \textbf{OC-2: Repository Growth} \\
 Every draft save creates a new commit. Repositories can grow unbounded over time.

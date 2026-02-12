@@ -43,12 +43,12 @@ The system uses \texttt{git update-ref <ref> <newSHA> <oldSHA>} to ensure atomic
 
     \draw [line] (Input) -- (Enc);
     \draw [line] (Enc) -- (Blob);
-    \draw [line] (Blob) -- (Manifest);
+    \draw [line] (Enc) -- (Manifest);
     
     \node [draw, dashed, thick, inner sep=10pt, fit=(Input) (Enc)] (AuthorBox) {};
     \node [anchor=south, font=\small\itshape] at (AuthorBox.north) {Author Laptop};
     
-    \node [draw, dashed, thick, inner sep=10pt, fit=(Blob)] (GatewayBox) {};
+    \node [draw, dashed, thick, inner sep=10pt, fit=(Blob) (Manifest)] (GatewayBox) {};
     \node [anchor=south, font=\small\itshape] at (GatewayBox.north) {Untrusted Gateway};
 \end{tikzpicture}
 }

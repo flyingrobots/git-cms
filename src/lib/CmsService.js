@@ -59,12 +59,9 @@ export default class CmsService {
   async listArticles({ kind = 'articles' } = {}) {
     const canonicalKind = canonicalizeKind(kind);
     const ns = `${this.refPrefix}/${canonicalKind}/`;
-    let out = '';
-    try {
-      out = await this.plumbing.execute({ args: ['for-each-ref', ns, '--format=%(refname) %(objectname)'] });
-    } catch {
-      return [];
-    }
+    const out = await this.plumbing.execute({
+      args: ['for-each-ref', ns, '--format=%(refname) %(objectname)'],
+    });
 
     return out
       .split('\n')
@@ -154,7 +151,7 @@ export default class CmsService {
 
     const treeOid = await this.cas.createTree({ manifest });
     
-    const ref = `refs/_blog/chunks/${canonicalSlug}@current`;
+    const ref = `${this.refPrefix}/chunks/${canonicalSlug}@current`;
     const commitSha = await this.graph.commitNode({
       message: `asset:${filename}\n\nmanifest: ${treeOid}`,
     });

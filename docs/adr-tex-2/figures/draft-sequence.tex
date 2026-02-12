@@ -12,7 +12,7 @@
     \draw [->] ($(CLI)+(0,-1.5)$) -- node [scale=0.7] {saveSnapshot()} ($(CMS)+(0,-1.5)$);
     \draw [->] ($(CMS)+(0,-2.2)$) -- node [scale=0.7] {revParse(ref)} ($(PL)+(0,-2.2)$);
     \draw [<-] ($(CMS)+(0,-3)$) -- node [scale=0.7] {null} ($(PL)+(0,-3)$);
-    \draw [->] ($(CMS)+(0,-4)$) -- node [scale=0.7] {createNode()} ($(CMS)+(0.8,-4.2)$);
+    \draw [->] ($(CMS)+(0,-4)$) -- ++(1.2,0) -- ++(0,-0.6) -- ++(-1.2,0) node [scale=0.7, pos=0.55, above] {createNode()};
     \draw [->] ($(CMS)+(0,-5)$) -- node [scale=0.7] {updateRef()} ($(PL)+(0,-5)$);
     \draw [<-] ($(CLI)+(0,-6)$) -- node [scale=0.7] {OK} ($(CMS)+(0,-6)$);
 \end{tikzpicture}
