@@ -182,10 +182,14 @@
     let currentSha = null;
 
     async function fetchList() {
-      const res = await fetch(`${API}/list?kind=draft`);
+      const res = await fetch(`${API}/list?kind=articles`);
       const items = await res.json();
       const ul = document.getElementById('draftList');
       ul.innerHTML = '';
+      if (!res.ok || !Array.isArray(items)) {
+        document.getElementById('status').textContent = 'Failed to load draft list';
+        return;
+      }
       items.forEach(item => {
         const li = document.createElement('li');
         li.className = 'article-item';
@@ -222,19 +226,30 @@
       const slug = document.getElementById('slugInput').value;
       const title = document.getElementById('titleInput').value;
       const body = document.getElementById('bodyInput').value;
-      const message = `${title}\n\n${body}\n\nStatus: draft`;
 
       if (!slug) return alert('Slug required');
+      if (!title) return alert('Title required');
 
       document.getElementById('status').textContent = 'Saving...';
-      const res = await fetch(`${API}/snapshot`, {
-        method: 'POST',
-        body: JSON.stringify({ slug, message })
-      });
-      const data = await res.json();
-      currentSha = data.sha;
-      document.getElementById('status').textContent = `Saved ${data.sha.slice(0,7)}`;
-      fetchList();
+      try {
+        const res = await fetch(`${API}/snapshot`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ slug, title, body })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || `save failed (${res.status})`);
+        }
+        if (!data.sha) {
+          throw new Error('save failed (missing commit sha)');
+        }
+        currentSha = data.sha;
+        document.getElementById('status').textContent = `Saved ${data.sha.slice(0,7)}`;
+        await fetchList();
+      } catch (err) {
+        document.getElementById('status').textContent = `Save failed: ${err.message}`;
+      }
     }
 
     async function publish() {
@@ -243,12 +258,23 @@
       if (!confirm(`Publish ${slug}? This will update the public ref.`)) return;
 
       document.getElementById('status').textContent = 'Publishing...';
-      const res = await fetch(`${API}/publish`, {
-        method: 'POST',
-        body: JSON.stringify({ slug, sha: currentSha }) // publish current loaded sha
-      });
-      const data = await res.json();
-      document.getElementById('status').textContent = `Published ${data.sha.slice(0,7)}`;
+      try {
+        const res = await fetch(`${API}/publish`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ slug, sha: currentSha }) // publish current loaded sha
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || `publish failed (${res.status})`);
+        }
+        if (!data.sha) {
+          throw new Error('publish failed (missing commit sha)');
+        }
+        document.getElementById('status').textContent = `Published ${data.sha.slice(0,7)}`;
+      } catch (err) {
+        document.getElementById('status').textContent = `Publish failed: ${err.message}`;
+      }
     }
 
     async function uploadFile(input) {
