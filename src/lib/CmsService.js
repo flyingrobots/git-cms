@@ -5,15 +5,22 @@ import ContentAddressableStore from '@git-stunts/git-cas';
 import VaultResolver from './VaultResolver.js';
 import ShellRunner from '@git-stunts/plumbing/ShellRunner';
 import {
+  CmsValidationError,
   canonicalizeKind,
   canonicalizeSlug,
   resolveContentIdentity,
 } from './ContentIdentityPolicy.js';
+import {
+  STATES,
+  resolveEffectiveState,
+  validateTransition,
+} from './ContentStatePolicy.js';
 
 /**
  * @typedef {Object} CmsServiceOptions
- * @property {string} cwd - The working directory of the git repo.
+ * @property {string} [cwd] - The working directory of the git repo.
  * @property {string} refPrefix - The namespace for git refs (e.g. refs/_blog/dev).
+ * @property {import('@git-stunts/git-warp').GraphPersistencePort} [graph] - Optional injected graph adapter (skips git subprocess setup).
  */
 
 /**
@@ -23,24 +30,45 @@ export default class CmsService {
   /**
    * @param {CmsServiceOptions} options
    */
-  constructor({ cwd, refPrefix }) {
-    this.cwd = cwd;
+  constructor({ cwd, refPrefix, graph }) {
     this.refPrefix = refPrefix.replace(/\/$/, '');
-    
-    // Initialize Lego Blocks with ShellRunner as the substrate
-    this.plumbing = new GitPlumbing({
-      runner: ShellRunner.run,
-      cwd
-    });
-    this.repo = new GitRepositoryService({ plumbing: this.plumbing });
-    
-    this.graph = new GitGraphAdapter({ plumbing: this.plumbing });
+
     const helpers = createMessageHelpers({
       bodyFormatOptions: { keepTrailingNewline: true }
     });
     this.codec = { decode: helpers.decodeMessage, encode: helpers.encodeMessage };
-    this.cas = new ContentAddressableStore({ plumbing: this.plumbing });
-    this.vault = new VaultResolver();
+
+    if (graph) {
+      // DI mode — caller provides a GraphPersistencePort (e.g. InMemoryGraphAdapter)
+      this.graph = graph;
+      this.plumbing = null;
+      this.repo = null;
+      this.cas = null;
+      this.vault = null;
+    } else {
+      // Production mode — wire up real git subprocess infrastructure
+      this.cwd = cwd;
+      this.plumbing = new GitPlumbing({
+        runner: ShellRunner.run,
+        cwd
+      });
+      this.repo = new GitRepositoryService({ plumbing: this.plumbing });
+      this.graph = new GitGraphAdapter({ plumbing: this.plumbing });
+      this.cas = new ContentAddressableStore({ plumbing: this.plumbing });
+      this.vault = new VaultResolver();
+    }
+  }
+
+  /**
+   * Routes ref updates to the correct backend.
+   * @private
+   */
+  async _updateRef({ ref, newSha, oldSha }) {
+    if (this.repo) {
+      await this.repo.updateRef({ ref, newSha, oldSha });
+    } else {
+      await this.graph.updateRef(ref, newSha);
+    }
   }
 
   /**
@@ -54,23 +82,69 @@ export default class CmsService {
   }
 
   /**
+   * Resolves the effective content state for an article.
+   * @private
+   * @returns {{ effectiveState: string, draftSha: string|null, pubSha: string|null, draftStatus: string }}
+   */
+  async _resolveArticleState(slug) {
+    const canonicalSlug = canonicalizeSlug(slug);
+    const draftRef = this._refFor(canonicalSlug, 'articles');
+    const pubRef = this._refFor(canonicalSlug, 'published');
+
+    const draftSha = await this.graph.readRef(draftRef);
+    const pubSha = await this.graph.readRef(pubRef);
+
+    let draftStatus = STATES.DRAFT;
+    if (draftSha) {
+      const message = await this.graph.showNode(draftSha);
+      const decoded = this.codec.decode(message);
+      draftStatus = decoded.trailers?.status || STATES.DRAFT;
+    }
+
+    const effectiveState = resolveEffectiveState({ draftStatus, pubSha });
+    return { effectiveState, draftSha, pubSha, draftStatus };
+  }
+
+  /**
+   * Returns the effective state of an article.
+   */
+  async getArticleState({ slug }) {
+    const canonicalSlug = canonicalizeSlug(slug);
+    const state = await this._resolveArticleState(canonicalSlug);
+    return { slug: canonicalSlug, state: state.effectiveState };
+  }
+
+  /**
    * Lists all articles of a certain kind.
    */
   async listArticles({ kind = 'articles' } = {}) {
     const canonicalKind = canonicalizeKind(kind);
     const ns = `${this.refPrefix}/${canonicalKind}/`;
-    const out = await this.plumbing.execute({
-      args: ['for-each-ref', ns, '--format=%(refname) %(objectname)'],
-    });
 
-    return out
-      .split('\n')
-      .filter(Boolean)
-      .map((line) => {
-        const [ref, sha] = line.split(' ');
-        const slug = ref.replace(ns, '');
-        return { ref, sha, slug };
+    if (this.plumbing) {
+      const out = await this.plumbing.execute({
+        args: ['for-each-ref', ns, '--format=%(refname) %(objectname)'],
       });
+
+      return out
+        .split('\n')
+        .filter(Boolean)
+        .map((line) => {
+          const [ref, sha] = line.split(' ');
+          const slug = ref.replace(ns, '');
+          return { ref, sha, slug };
+        });
+    }
+
+    // DI mode — use graph.listRefs + readRef
+    const refs = await this.graph.listRefs(ns);
+    const results = [];
+    for (const ref of refs) {
+      const sha = await this.graph.readRef(ref);
+      const slug = ref.replace(ns, '');
+      results.push({ ref, sha, slug });
+    }
+    return results;
   }
 
   /**
@@ -93,7 +167,13 @@ export default class CmsService {
     const identity = resolveContentIdentity({ slug, trailers: safeTrailers });
     const ref = this._refFor(identity.slug, 'articles');
     const parentSha = await this.graph.readRef(ref);
-    
+
+    // Guard: validate state transition if article already exists
+    if (parentSha) {
+      const { effectiveState } = await this._resolveArticleState(identity.slug);
+      validateTransition(effectiveState, STATES.DRAFT);
+    }
+
     const finalTrailers = {
       ...safeTrailers,
       contentid: identity.contentId,
@@ -108,7 +188,7 @@ export default class CmsService {
       sign: process.env.CMS_SIGN === '1'
     });
 
-    await this.repo.updateRef({ ref, newSha, oldSha: parentSha });
+    await this._updateRef({ ref, newSha, oldSha: parentSha });
     return { ref, sha: newSha, parent: parentSha };
   }
 
@@ -119,14 +199,92 @@ export default class CmsService {
     const canonicalSlug = canonicalizeSlug(slug);
     const draftRef = this._refFor(canonicalSlug, 'articles');
     const pubRef = this._refFor(canonicalSlug, 'published');
-    
+
     const targetSha = sha || await this.graph.readRef(draftRef);
     if (!targetSha) throw new Error(`Nothing to publish for ${canonicalSlug}`);
 
-    const oldSha = await this.graph.readRef(pubRef);
-    await this.repo.updateRef({ ref: pubRef, newSha: targetSha, oldSha });
-    
-    return { ref: pubRef, sha: targetSha, prev: oldSha };
+    // Guard: validate state transition
+    const { effectiveState, pubSha } = await this._resolveArticleState(canonicalSlug);
+    validateTransition(effectiveState, STATES.PUBLISHED);
+
+    // Idempotent: re-publishing the same SHA is a no-op
+    if (pubSha === targetSha) {
+      return { ref: pubRef, sha: targetSha, prev: pubSha };
+    }
+
+    await this._updateRef({ ref: pubRef, newSha: targetSha, oldSha: pubSha });
+    return { ref: pubRef, sha: targetSha, prev: pubSha };
+  }
+
+  /**
+   * Unpublishes an article: deletes the published ref and marks draft as unpublished.
+   */
+  async unpublishArticle({ slug }) {
+    const canonicalSlug = canonicalizeSlug(slug);
+    const draftRef = this._refFor(canonicalSlug, 'articles');
+    const pubRef = this._refFor(canonicalSlug, 'published');
+
+    const { effectiveState, draftSha } = await this._resolveArticleState(canonicalSlug);
+    validateTransition(effectiveState, STATES.UNPUBLISHED);
+
+    // Delete the published ref
+    await this.graph.deleteRef(pubRef);
+
+    // Read current draft content and re-commit with status: unpublished
+    const message = await this.graph.showNode(draftSha);
+    const decoded = this.codec.decode(message);
+    const newMessage = this.codec.encode({
+      title: decoded.title,
+      body: decoded.body,
+      trailers: { ...decoded.trailers, status: STATES.UNPUBLISHED, updatedat: new Date().toISOString() },
+    });
+
+    const newSha = await this.graph.commitNode({
+      message: newMessage,
+      parents: [draftSha],
+      sign: process.env.CMS_SIGN === '1',
+    });
+
+    await this._updateRef({ ref: draftRef, newSha, oldSha: draftSha });
+    return { ref: draftRef, sha: newSha, prev: draftSha };
+  }
+
+  /**
+   * Reverts an article to its parent's content, preserving full history.
+   */
+  async revertArticle({ slug }) {
+    const canonicalSlug = canonicalizeSlug(slug);
+    const draftRef = this._refFor(canonicalSlug, 'articles');
+
+    const { effectiveState, draftSha } = await this._resolveArticleState(canonicalSlug);
+    validateTransition(effectiveState, STATES.REVERTED);
+
+    const info = await this.graph.getNodeInfo(draftSha);
+    if (!info.parents || info.parents.length === 0 || !info.parents[0]) {
+      throw new CmsValidationError(
+        `Cannot revert "${canonicalSlug}": no parent commit exists`,
+        { code: 'revert_no_parent', field: 'slug' }
+      );
+    }
+
+    const parentCommitSha = info.parents[0];
+    const parentMessage = await this.graph.showNode(parentCommitSha);
+    const parentDecoded = this.codec.decode(parentMessage);
+
+    const newMessage = this.codec.encode({
+      title: parentDecoded.title,
+      body: parentDecoded.body,
+      trailers: { ...parentDecoded.trailers, status: STATES.REVERTED, updatedat: new Date().toISOString() },
+    });
+
+    const newSha = await this.graph.commitNode({
+      message: newMessage,
+      parents: [draftSha],
+      sign: process.env.CMS_SIGN === '1',
+    });
+
+    await this._updateRef({ ref: draftRef, newSha, oldSha: draftSha });
+    return { ref: draftRef, sha: newSha, prev: draftSha };
   }
 
   /**
@@ -156,7 +314,7 @@ export default class CmsService {
       message: `asset:${filename}\n\nmanifest: ${treeOid}`,
     });
 
-    await this.repo.updateRef({ ref, newSha: commitSha });
+    await this._updateRef({ ref, newSha: commitSha });
     
     return { manifest, treeOid, commitSha };
   }

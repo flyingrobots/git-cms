@@ -163,4 +163,68 @@ describe('Server API (Integration)', () => {
     const res = await fetch(`${baseUrl}/_test-secret-link.txt`);
     expect(res.status).toBe(404);
   });
+
+  it('unpublishes an article via POST /api/cms/unpublish', async () => {
+    // Create and publish first
+    await fetch(`${baseUrl}/api/cms/snapshot`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slug: 'srv-unpub', title: 'T', body: 'B' }),
+    });
+    await fetch(`${baseUrl}/api/cms/publish`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slug: 'srv-unpub' }),
+    });
+
+    const res = await fetch(`${baseUrl}/api/cms/unpublish`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slug: 'srv-unpub' }),
+    });
+    const data = await res.json();
+    expect(res.status).toBe(200);
+    expect(data.sha).toBeDefined();
+  });
+
+  it('reverts an article via POST /api/cms/revert', async () => {
+    // Create two versions so there is a parent
+    await fetch(`${baseUrl}/api/cms/snapshot`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slug: 'srv-revert', title: 'v1', body: 'b1' }),
+    });
+    await fetch(`${baseUrl}/api/cms/snapshot`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slug: 'srv-revert', title: 'v2', body: 'b2' }),
+    });
+
+    const res = await fetch(`${baseUrl}/api/cms/revert`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slug: 'srv-revert' }),
+    });
+    const data = await res.json();
+    expect(res.status).toBe(200);
+    expect(data.sha).toBeDefined();
+  });
+
+  it('returns 400 with invalid_state_transition for bad transitions', async () => {
+    // Create a draft, then try to unpublish it (invalid: draft → unpublished)
+    await fetch(`${baseUrl}/api/cms/snapshot`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slug: 'srv-bad-trans', title: 'T', body: 'B' }),
+    });
+
+    const res = await fetch(`${baseUrl}/api/cms/unpublish`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slug: 'srv-bad-trans' }),
+    });
+    const data = await res.json();
+    expect(res.status).toBe(400);
+    expect(data.code).toBe('invalid_state_transition');
+  });
 });
