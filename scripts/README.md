@@ -2,7 +2,7 @@
 
 Helper scripts for working with git-cms safely.
 
-**All scripts are tested!** See `test/setup.bats` for the test suite.
+`setup.sh` is tested via `test/setup.bats`. Other scripts are manually verified.
 
 ## Available Scripts
 
@@ -88,6 +88,6 @@ npm test
 
 ## More Info
 
-- Getting Started Guide: `docs/GETTING_STARTED.md`
-- Architecture Decision Record: `docs/ADR.md`
-- Main README: `README.md`
+- [Getting Started Guide](../docs/GETTING_STARTED.md)
+- [Architecture Decision Record](../docs/ADR.md)
+- [Main README](../README.md)
