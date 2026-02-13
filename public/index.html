@@ -4,17 +4,25 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Git CMS Admin</title>
+  <script src="https://cdn.jsdelivr.net/npm/marked@15/marked.min.js"></script>
   <style>
     @import "https://unpkg.com/open-props";
     @import "https://unpkg.com/open-props/normalize.min.css";
     @import "https://unpkg.com/open-props/buttons.min.css";
 
+    /* ── Tokens ── */
     :root {
       --brand: var(--blue-6);
       --surface-1: var(--gray-0);
       --surface-2: var(--gray-1);
+      --surface-3: var(--gray-2);
       --text-1: var(--gray-9);
       --text-2: var(--gray-7);
+      --success: var(--green-6);
+      --warning: var(--yellow-5);
+      --danger: var(--red-6);
+      --info: var(--blue-5);
+      --sidebar-w: 280px;
     }
 
     @media (prefers-color-scheme: dark) {
@@ -22,21 +30,30 @@
         --brand: var(--blue-4);
         --surface-1: var(--gray-9);
         --surface-2: var(--gray-8);
+        --surface-3: var(--gray-7);
         --text-1: var(--gray-1);
         --text-2: var(--gray-4);
+        --success: var(--green-4);
+        --warning: var(--yellow-3);
+        --danger: var(--red-4);
+        --info: var(--blue-3);
       }
+      aside header .logo { filter: invert(1); }
     }
 
+    /* ── Layout ── */
     body {
       background: var(--surface-1);
       color: var(--text-1);
       font-family: var(--font-sans);
       display: grid;
-      grid-template-columns: 300px 1fr;
+      grid-template-columns: var(--sidebar-w) 1fr;
       height: 100vh;
       overflow: hidden;
+      margin: 0;
     }
 
+    /* ── Sidebar ── */
     aside {
       background: var(--surface-2);
       border-right: 1px solid var(--surface-3);
@@ -44,57 +61,116 @@
       overflow-y: auto;
       display: flex;
       flex-direction: column;
-      gap: var(--size-4);
+      gap: var(--size-3);
     }
 
-    main {
-      padding: var(--size-5);
-      overflow-y: auto;
+    aside header .logo { display: block; height: 28px; width: auto; }
+    aside header h1 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; }
+    aside header p { font-size: var(--font-size-0); color: var(--text-2); margin: var(--size-1) 0 0; }
+
+    /* ── Sidebar Tabs ── */
+    .tab-group {
       display: flex;
-      flex-direction: column;
-      gap: var(--size-4);
-      max-width: 900px;
-      margin: 0 auto;
-      width: 100%;
+      border-radius: var(--radius-2);
+      overflow: hidden;
+      border: 1px solid var(--surface-3);
+    }
+    .tab-group button {
+      flex: 1;
+      padding: var(--size-2);
+      border: none;
+      background: var(--surface-1);
+      color: var(--text-2);
+      cursor: pointer;
+      font-weight: 600;
+      font-size: var(--font-size-0);
+      transition: background 0.15s, color 0.15s;
+    }
+    .tab-group button.active {
+      background: var(--brand);
+      color: white;
+    }
+    .tab-group button:not(.active):hover {
+      background: var(--surface-3);
     }
 
-    h1 { font-size: var(--font-size-4); color: var(--text-1); margin: 0; }
-    h2 { font-size: var(--font-size-2); color: var(--text-2); margin: 0; text-transform: uppercase; letter-spacing: var(--font-letterspacing-1); }
+    .new-btn {
+      width: 100%;
+      text-align: center;
+      padding: var(--size-2) var(--size-4);
+      border-radius: var(--radius-2);
+      border: 1px solid var(--surface-3);
+      background: var(--surface-1);
+      color: var(--text-1);
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .new-btn:hover { background: var(--surface-3); }
 
+    /* ── Article List ── */
     .article-list {
       list-style: none;
       padding: 0;
       margin: 0;
       display: grid;
-      gap: var(--size-2);
+      gap: var(--size-1);
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
     }
 
     .article-item {
       padding: var(--size-2) var(--size-3);
       border-radius: var(--radius-2);
       cursor: pointer;
-      transition: background 0.2s;
+      transition: background 0.15s;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .article-item:hover { background: var(--surface-3); }
+    .article-item.active { background: var(--brand); color: white; }
+    .article-item .slug { font-weight: 500; font-size: var(--font-size-1); }
+    .article-item .time { font-size: var(--font-size-00); opacity: 0.7; }
+
+    aside footer {
+      font-size: var(--font-size-00);
+      color: var(--text-2);
+      padding-top: var(--size-2);
+      border-top: 1px solid var(--surface-3);
     }
 
-    .article-item:hover {
-      background: var(--surface-3);
+    /* ── Skeleton Loading ── */
+    .skeleton {
+      background: linear-gradient(90deg, var(--surface-3) 25%, var(--surface-2) 50%, var(--surface-3) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: var(--radius-2);
+      height: 2.4em;
+    }
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
     }
 
-    .article-item.active {
-      background: var(--brand);
-      color: white;
+    /* ── Main Area ── */
+    main {
+      padding: var(--size-4);
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: var(--size-3);
     }
 
+    /* ── Toolbar ── */
     .toolbar {
       display: flex;
-      gap: var(--size-3);
+      gap: var(--size-2);
       align-items: center;
-      padding-bottom: var(--size-4);
-      border-bottom: 1px solid var(--surface-2);
+      flex-wrap: wrap;
     }
 
-    input[type="text"], textarea {
-      width: 100%;
+    input[type="text"] {
       background: var(--surface-1);
       color: var(--text-1);
       border: 1px solid var(--surface-3);
@@ -102,13 +178,9 @@
       padding: var(--size-2) var(--size-3);
       font-family: inherit;
     }
-
-    textarea {
-      flex: 1;
-      resize: none;
-      font-family: var(--font-mono);
-      line-height: 1.6;
-      min-height: 400px;
+    input[type="text"]:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
     }
 
     .btn {
@@ -119,197 +191,764 @@
       border-radius: var(--radius-2);
       cursor: pointer;
       font-weight: 600;
+      white-space: nowrap;
+      transition: opacity 0.15s;
     }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-primary { background: var(--brand); color: white; border-color: var(--brand); }
+    .btn-primary:hover:not(:disabled) { opacity: 0.9; }
 
-    .btn-primary {
+    /* ── Mode Toggle ── */
+    .mode-toggle {
+      display: flex;
+      border-radius: var(--radius-2);
+      overflow: hidden;
+      border: 1px solid var(--surface-3);
+    }
+    .mode-toggle button {
+      padding: var(--size-1) var(--size-3);
+      border: none;
+      background: var(--surface-1);
+      color: var(--text-2);
+      cursor: pointer;
+      font-size: var(--font-size-0);
+      font-weight: 500;
+    }
+    .mode-toggle button.active {
       background: var(--brand);
       color: white;
-      border-color: var(--brand);
     }
 
+    /* ── Editor Area ── */
+    .editor-area {
+      display: grid;
+      gap: var(--size-3);
+      flex: 1;
+      min-height: 300px;
+    }
+    .editor-area[data-mode="split"] { grid-template-columns: 1fr 1fr; }
+    .editor-area[data-mode="edit"]  { grid-template-columns: 1fr 0fr; }
+    .editor-area[data-mode="preview"] { grid-template-columns: 0fr 1fr; }
+
+    .editor-area textarea {
+      width: 100%;
+      height: 100%;
+      resize: none;
+      font-family: var(--font-mono);
+      line-height: 1.6;
+      background: var(--surface-1);
+      color: var(--text-1);
+      border: 1px solid var(--surface-3);
+      border-radius: var(--radius-2);
+      padding: var(--size-3);
+      box-sizing: border-box;
+      min-height: 300px;
+    }
+    .editor-area[data-mode="preview"] textarea { display: none; }
+    .editor-area[data-mode="edit"] #previewPane { display: none; }
+
+    /* ── Preview Pane ── */
+    #previewPane {
+      border: 1px solid var(--surface-3);
+      border-radius: var(--radius-2);
+      padding: var(--size-3);
+      overflow-y: auto;
+      background: var(--surface-1);
+      line-height: 1.7;
+    }
+    #previewPane h1, #previewPane h2, #previewPane h3 { margin: 0.8em 0 0.4em; }
+    #previewPane h1 { font-size: var(--font-size-4); }
+    #previewPane h2 { font-size: var(--font-size-3); }
+    #previewPane h3 { font-size: var(--font-size-2); }
+    #previewPane p { margin: 0.5em 0; }
+    #previewPane code {
+      background: var(--surface-2);
+      padding: 0.15em 0.4em;
+      border-radius: var(--radius-1);
+      font-size: 0.9em;
+    }
+    #previewPane pre {
+      background: var(--surface-2);
+      padding: var(--size-3);
+      border-radius: var(--radius-2);
+      overflow-x: auto;
+    }
+    #previewPane pre code { background: none; padding: 0; }
+    #previewPane ul, #previewPane ol { padding-left: 1.5em; }
+    #previewPane blockquote {
+      border-left: 3px solid var(--brand);
+      margin: 0.5em 0;
+      padding-left: var(--size-3);
+      color: var(--text-2);
+    }
+    #previewPane img { max-width: 100%; border-radius: var(--radius-2); }
+
+    /* ── Metadata Section ── */
+    details {
+      border: 1px solid var(--surface-3);
+      border-radius: var(--radius-2);
+      padding: var(--size-3);
+    }
+    details summary {
+      cursor: pointer;
+      font-weight: 600;
+      font-size: var(--font-size-1);
+    }
+    .badge-row {
+      display: flex;
+      gap: var(--size-2);
+      flex-wrap: wrap;
+      margin-top: var(--size-2);
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: var(--size-1) var(--size-3);
+      border-radius: var(--radius-round);
+      font-size: var(--font-size-0);
+      font-weight: 500;
+    }
+    .badge-draft { background: var(--yellow-2); color: var(--yellow-9); }
+    .badge-published { background: var(--green-2); color: var(--green-9); }
+    .badge-info { background: var(--blue-1); color: var(--blue-8); }
+
+    .trailer-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr auto;
+      gap: var(--size-2);
+      margin-top: var(--size-3);
+      align-items: center;
+    }
+    .trailer-grid input {
+      padding: var(--size-1) var(--size-2);
+      font-size: var(--font-size-0);
+    }
+    .trailer-grid .remove-btn {
+      background: none;
+      border: none;
+      color: var(--danger);
+      cursor: pointer;
+      font-size: var(--font-size-2);
+      padding: 0 var(--size-1);
+    }
+    .add-trailer-btn {
+      margin-top: var(--size-2);
+      font-size: var(--font-size-0);
+    }
+
+    /* ── Asset / Drop Zone ── */
+    .asset-section {
+      border: 2px dashed var(--surface-3);
+      border-radius: var(--radius-2);
+      padding: var(--size-4);
+      text-align: center;
+      color: var(--text-2);
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .asset-section.dragover {
+      border-color: var(--brand);
+      background: color-mix(in srgb, var(--brand) 8%, transparent);
+    }
+    .asset-section label {
+      display: inline-block;
+      margin-top: var(--size-2);
+    }
+
+    /* ── Status Bar ── */
     .status-bar {
       font-size: var(--font-size-0);
       color: var(--text-2);
-      margin-top: auto;
+      padding-top: var(--size-2);
+      border-top: 1px solid var(--surface-3);
     }
-    
-    .new-btn {
-      width: 100%;
-      text-align: center;
+
+    /* ── Empty State ── */
+    #emptyState {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: var(--size-3);
+      color: var(--text-2);
+      height: 100%;
+    }
+    #emptyState span { font-size: 3rem; }
+    #emptyState p { font-size: var(--font-size-2); }
+
+    /* ── Toast Notifications ── */
+    #toastContainer {
+      position: fixed;
+      bottom: var(--size-4);
+      right: var(--size-4);
+      display: flex;
+      flex-direction: column-reverse;
+      gap: var(--size-2);
+      z-index: 1000;
+      pointer-events: none;
+    }
+    .toast {
+      padding: var(--size-3) var(--size-4);
+      border-radius: var(--radius-2);
+      color: white;
+      font-weight: 500;
+      font-size: var(--font-size-1);
+      animation: slideIn 0.3s ease-out;
+      pointer-events: auto;
+      box-shadow: var(--shadow-3);
+    }
+    .toast-success { background: var(--green-7); }
+    .toast-error { background: var(--red-7); }
+    .toast-info { background: var(--blue-7); }
+    @keyframes slideIn {
+      from { transform: translateX(120%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
     }
   </style>
 </head>
 <body>
+  <!-- ── Sidebar ── -->
   <aside>
-    <div>
+    <header>
+      <img src="/GitCMS.svg" alt="GitCMS" class="logo">
       <h1>Git CMS</h1>
-      <p style="font-size: 0.8rem; color: var(--text-2)">The "Empty Tree" Edition</p>
-    </div>
-    
-    <button class="btn new-btn" onclick="newItem()">+ New Article</button>
+      <p>Content Management</p>
+    </header>
 
-    <div>
-      <h2>Drafts</h2>
-      <ul id="draftList" class="article-list"></ul>
-    </div>
+    <nav class="tab-group">
+      <button class="active" data-kind="articles" onclick="UI.switchTab('articles')">Drafts</button>
+      <button data-kind="published" onclick="UI.switchTab('published')">Live</button>
+    </nav>
+
+    <button class="new-btn" onclick="UI.newArticle()">+ New Article</button>
+
+    <ul id="draftList" class="article-list"></ul>
+
+    <footer id="listFooter">0 articles</footer>
   </aside>
 
-  <main>
+  <!-- ── Main Editor (hidden until article selected) ── -->
+  <main id="editorPanel" style="display:none">
     <div class="toolbar">
-      <input type="text" id="slugInput" placeholder="slug (e.g. hello-world)" style="width: 200px">
-      <input type="text" id="titleInput" placeholder="Article Title" style="flex: 1">
-      <div style="display: flex; gap: var(--size-2)">
-        <button class="btn" onclick="save()">Save Draft</button>
-        <button class="btn btn-primary" onclick="publish()">Publish</button>
+      <input type="text" id="slugInput" placeholder="slug (e.g. hello-world)" style="width:170px">
+      <input type="text" id="titleInput" placeholder="Article Title" style="flex:1">
+      <div class="mode-toggle">
+        <button class="active" data-mode="split" onclick="UI.setMode('split')">Split</button>
+        <button data-mode="edit" onclick="UI.setMode('edit')">Edit</button>
+        <button data-mode="preview" onclick="UI.setMode('preview')">Preview</button>
       </div>
+      <button class="btn" id="saveBtn" onclick="UI.save()">Save Draft</button>
+      <button class="btn btn-primary" id="publishBtn" onclick="UI.publish()">Publish</button>
     </div>
 
-    <textarea id="bodyInput" placeholder="Write in Markdown..."></textarea>
-    
-    <div class="toolbar" style="border-top: 1px solid var(--surface-2); border-bottom: none; padding-top: var(--size-4)">
-       <label class="btn">
-         Attach File
-         <input type="file" id="fileInput" hidden onchange="uploadFile(this)">
-       </label>
-       <span id="uploadStatus" style="font-size: 0.9rem"></span>
+    <div class="editor-area" id="editorArea" data-mode="split">
+      <textarea id="bodyInput" placeholder="Write in Markdown..."></textarea>
+      <div id="previewPane"></div>
     </div>
-    
+
+    <details>
+      <summary>Metadata</summary>
+      <div class="badge-row" id="badgeRow"></div>
+      <div class="trailer-grid" id="trailerGrid"></div>
+      <button class="btn add-trailer-btn" onclick="UI.addTrailerRow()">+ Add Field</button>
+    </details>
+
+    <div class="asset-section" id="dropZone">
+      Drop files here or
+      <label class="btn" style="margin-left:var(--size-2)">
+        Browse
+        <input type="file" id="fileInput" hidden>
+      </label>
+      <div id="assetList" style="margin-top:var(--size-2);font-size:var(--font-size-0)"></div>
+    </div>
+
     <div id="status" class="status-bar">Ready</div>
   </main>
 
+  <!-- ── Empty State ── -->
+  <div id="emptyState">
+    <span>&#9998;</span>
+    <p>Select an article or create a new one</p>
+  </div>
+
+  <!-- ── Toasts ── -->
+  <div id="toastContainer"></div>
+
   <script>
-    const API = '/api/cms';
-    let currentSha = null;
+    /* ── State ── */
+    const state = {
+      currentSlug: null,
+      currentSha: null,
+      currentKind: 'articles',
+      articles: [],
+      dirty: false,
+      saving: false,
+      autosaveTimer: null,
+      editorMode: 'split',
+      trailers: {},
+    };
 
-    async function fetchList() {
-      const res = await fetch(`${API}/list?kind=articles`);
-      const items = await res.json();
-      const ul = document.getElementById('draftList');
-      ul.innerHTML = '';
-      if (!res.ok || !Array.isArray(items)) {
-        document.getElementById('status').textContent = 'Failed to load draft list';
-        return;
-      }
-      items.forEach(item => {
-        const li = document.createElement('li');
-        li.className = 'article-item';
-        li.textContent = item.slug; // In a real app we'd fetch titles, but listRefs just gives slugs/shas efficiently
-        li.onclick = () => load(item.slug);
-        ul.appendChild(li);
-      });
-    }
+    /* ── API Layer ── */
+    const API_BASE = '/api/cms';
 
-    async function load(slug) {
-      document.getElementById('status').textContent = `Loading ${slug}...`;
-      const res = await fetch(`${API}/show?slug=${slug}`);
-      const data = await res.json();
-      
-      document.getElementById('slugInput').value = slug;
-      document.getElementById('titleInput').value = data.title;
-      document.getElementById('bodyInput').value = data.body;
-      currentSha = data.sha;
-      
-      document.querySelectorAll('.article-item').forEach(el => el.classList.remove('active'));
-      // Highlight active
-      document.getElementById('status').textContent = `Loaded ${slug} (${data.sha.slice(0,7)})`;
-    }
+    const api = {
+      async list(kind) {
+        const res = await fetch(`${API_BASE}/list?kind=${kind}`);
+        if (!res.ok) throw new Error(`List failed: ${res.status}`);
+        return res.json();
+      },
 
-    function newItem() {
-      document.getElementById('slugInput').value = '';
-      document.getElementById('titleInput').value = '';
-      document.getElementById('bodyInput').value = '';
-      currentSha = null;
-      document.getElementById('status').textContent = 'New Draft';
-    }
+      async show(slug, kind = 'articles') {
+        const res = await fetch(`${API_BASE}/show?slug=${encodeURIComponent(slug)}&kind=${kind}`);
+        if (!res.ok) throw new Error(`Show failed: ${res.status}`);
+        return res.json();
+      },
 
-    async function save() {
-      const slug = document.getElementById('slugInput').value;
-      const title = document.getElementById('titleInput').value;
-      const body = document.getElementById('bodyInput').value;
-
-      if (!slug) return alert('Slug required');
-      if (!title) return alert('Title required');
-
-      document.getElementById('status').textContent = 'Saving...';
-      try {
-        const res = await fetch(`${API}/snapshot`, {
+      async snapshot({ slug, title, body, trailers }) {
+        const res = await fetch(`${API_BASE}/snapshot`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ slug, title, body })
+          body: JSON.stringify({ slug, title, body, trailers }),
         });
-        const data = await res.json();
-        if (!res.ok) {
-          throw new Error(data.error || `save failed (${res.status})`);
-        }
-        if (!data.sha) {
-          throw new Error('save failed (missing commit sha)');
-        }
-        currentSha = data.sha;
-        document.getElementById('status').textContent = `Saved ${data.sha.slice(0,7)}`;
-        await fetchList();
-      } catch (err) {
-        document.getElementById('status').textContent = `Save failed: ${err.message}`;
-      }
-    }
+        if (!res.ok) throw new Error(`Snapshot failed: ${res.status}`);
+        return res.json();
+      },
 
-    async function publish() {
-      const slug = document.getElementById('slugInput').value;
-      if (!slug) return alert('Slug required');
-      if (!confirm(`Publish ${slug}? This will update the public ref.`)) return;
-
-      document.getElementById('status').textContent = 'Publishing...';
-      try {
-        const res = await fetch(`${API}/publish`, {
+      async publish({ slug, sha }) {
+        const res = await fetch(`${API_BASE}/publish`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ slug, sha: currentSha }) // publish current loaded sha
+          body: JSON.stringify({ slug, sha }),
         });
-        const data = await res.json();
-        if (!res.ok) {
-          throw new Error(data.error || `publish failed (${res.status})`);
-        }
-        if (!data.sha) {
-          throw new Error('publish failed (missing commit sha)');
-        }
-        document.getElementById('status').textContent = `Published ${data.sha.slice(0,7)}`;
-      } catch (err) {
-        document.getElementById('status').textContent = `Publish failed: ${err.message}`;
-      }
-    }
+        if (!res.ok) throw new Error(`Publish failed: ${res.status}`);
+        return res.json();
+      },
 
-    async function uploadFile(input) {
-      const file = input.files[0];
-      if (!file) return;
-      
-      const slug = document.getElementById('slugInput').value;
-      if (!slug) return alert('Please enter a slug first');
-
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        const b64 = e.target.result.split(',')[1]; // strip data: prefix
-        document.getElementById('uploadStatus').textContent = 'Uploading...';
-        
-        const res = await fetch(`${API}/upload`, {
+      async upload({ slug, filename, data }) {
+        const res = await fetch(`${API_BASE}/upload`, {
           method: 'POST',
-          body: JSON.stringify({
-            slug,
-            filename: file.name,
-            data: b64
-          })
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ slug, filename, data }),
         });
-        const data = await res.json();
-        
-        // Insert into editor
-        const textarea = document.getElementById('bodyInput');
-        const text = `\n![${file.name}](${data.assetUrl})\n`;
-        textarea.value += text;
-        document.getElementById('uploadStatus').textContent = 'Uploaded!';
-      };
-      reader.readAsDataURL(file);
+        if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
+        return res.json();
+      },
+    };
+
+    /* ── Toast ── */
+    function toast(message, type = 'info') {
+      const el = document.createElement('div');
+      el.className = `toast toast-${type}`;
+      el.textContent = message;
+      document.getElementById('toastContainer').appendChild(el);
+      setTimeout(() => el.remove(), 4000);
     }
 
-    // Init
-    fetchList();
+    /* ── Preview Debounce ── */
+    let previewTimer = null;
+    function updatePreview() {
+      clearTimeout(previewTimer);
+      previewTimer = setTimeout(() => {
+        const body = document.getElementById('bodyInput').value;
+        document.getElementById('previewPane').innerHTML = marked.parse(body || '');
+      }, 150);
+    }
+
+    /* ── Relative Time ── */
+    function relTime(dateStr) {
+      if (!dateStr) return '';
+      try {
+        const diff = Date.now() - new Date(dateStr).getTime();
+        const mins = Math.floor(diff / 60000);
+        if (mins < 1) return 'just now';
+        if (mins < 60) return `${mins}m ago`;
+        const hrs = Math.floor(mins / 60);
+        if (hrs < 24) return `${hrs}h ago`;
+        return `${Math.floor(hrs / 24)}d ago`;
+      } catch { return ''; }
+    }
+
+    /* ── UI Controller ── */
+    const UI = {
+      /* Sidebar */
+      async switchTab(kind) {
+        state.currentKind = kind;
+        document.querySelectorAll('.tab-group button').forEach(b => {
+          b.classList.toggle('active', b.dataset.kind === kind);
+        });
+        await this.fetchList();
+      },
+
+      async fetchList() {
+        const ul = document.getElementById('draftList');
+        // Show skeleton placeholders
+        ul.innerHTML = Array(3).fill('<li class="skeleton"></li>').join('');
+
+        try {
+          const items = await api.list(state.currentKind);
+          state.articles = items;
+          ul.innerHTML = '';
+          items.forEach(item => {
+            const li = document.createElement('li');
+            li.className = 'article-item';
+            if (item.slug === state.currentSlug) li.classList.add('active');
+            li.innerHTML = `<span class="slug">${item.slug}</span>`;
+            li.onclick = () => this.loadArticle(item.slug);
+            ul.appendChild(li);
+          });
+          document.getElementById('listFooter').textContent = `${items.length} article${items.length !== 1 ? 's' : ''}`;
+        } catch (err) {
+          toast('Failed to load articles', 'error');
+          ul.innerHTML = '';
+        }
+      },
+
+      /* Load Article */
+      async loadArticle(slug) {
+        if (state.dirty) {
+          if (!confirm('You have unsaved changes. Discard them?')) return;
+        }
+        this.clearAutosave();
+        state.dirty = false;
+
+        const statusEl = document.getElementById('status');
+        statusEl.textContent = `Loading ${slug}...`;
+
+        try {
+          const data = await api.show(slug, state.currentKind);
+          state.currentSlug = slug;
+          state.currentSha = data.sha;
+          state.trailers = data.trailers || {};
+
+          document.getElementById('slugInput').value = slug;
+          document.getElementById('slugInput').disabled = true;
+          document.getElementById('titleInput').value = data.title || '';
+          document.getElementById('bodyInput').value = data.body || '';
+
+          this.showEditor();
+          this.renderBadges();
+          this.renderTrailers();
+          updatePreview();
+          this.highlightActive(slug);
+
+          statusEl.textContent = `Loaded ${slug} (${data.sha.slice(0, 7)})`;
+        } catch (err) {
+          toast(`Failed to load ${slug}`, 'error');
+          statusEl.textContent = 'Error loading article';
+        }
+      },
+
+      /* New Article */
+      newArticle() {
+        if (state.dirty) {
+          if (!confirm('You have unsaved changes. Discard them?')) return;
+        }
+        this.clearAutosave();
+        state.currentSlug = null;
+        state.currentSha = null;
+        state.dirty = false;
+        state.trailers = {};
+
+        document.getElementById('slugInput').value = '';
+        document.getElementById('slugInput').disabled = false;
+        document.getElementById('titleInput').value = '';
+        document.getElementById('bodyInput').value = '';
+        document.getElementById('previewPane').innerHTML = '';
+
+        this.showEditor();
+        this.renderBadges();
+        this.renderTrailers();
+        this.highlightActive(null);
+        document.getElementById('status').textContent = 'New Draft';
+        document.getElementById('slugInput').focus();
+      },
+
+      /* Save */
+      async save() {
+        const slug = document.getElementById('slugInput').value.trim();
+        const title = document.getElementById('titleInput').value.trim();
+        const body = document.getElementById('bodyInput').value;
+        const trailers = this.collectTrailers();
+
+        if (!slug) { toast('Slug is required', 'error'); return; }
+        if (!title) { toast('Title is required', 'error'); return; }
+        if (state.saving) return;
+
+        state.saving = true;
+        const saveBtn = document.getElementById('saveBtn');
+        saveBtn.textContent = 'Saving...';
+        saveBtn.disabled = true;
+        document.getElementById('status').textContent = 'Saving...';
+
+        try {
+          const data = await api.snapshot({ slug, title, body, trailers });
+          state.currentSlug = slug;
+          state.currentSha = data.sha;
+          state.dirty = false;
+          this.clearAutosave();
+
+          document.getElementById('slugInput').disabled = true;
+          document.getElementById('status').textContent = `Saved ${data.sha.slice(0, 7)}`;
+          toast('Draft saved', 'success');
+          this.fetchList();
+        } catch (err) {
+          toast('Save failed: ' + err.message, 'error');
+          document.getElementById('status').textContent = 'Save failed';
+        } finally {
+          state.saving = false;
+          saveBtn.textContent = 'Save Draft';
+          saveBtn.disabled = false;
+        }
+      },
+
+      /* Publish */
+      async publish() {
+        const slug = document.getElementById('slugInput').value.trim();
+        if (!slug) { toast('Slug is required', 'error'); return; }
+
+        if (state.dirty) {
+          toast('Save your changes before publishing', 'error');
+          return;
+        }
+        if (!confirm(`Publish "${slug}"? This will update the public ref.`)) return;
+        if (state.saving) return;
+
+        state.saving = true;
+        const pubBtn = document.getElementById('publishBtn');
+        pubBtn.textContent = 'Publishing...';
+        pubBtn.disabled = true;
+        document.getElementById('status').textContent = 'Publishing...';
+
+        try {
+          const data = await api.publish({ slug, sha: state.currentSha });
+          state.currentSha = data.sha;
+          document.getElementById('status').textContent = `Published ${data.sha.slice(0, 7)}`;
+          toast('Article published!', 'success');
+          this.fetchList();
+        } catch (err) {
+          toast('Publish failed: ' + err.message, 'error');
+          document.getElementById('status').textContent = 'Publish failed';
+        } finally {
+          state.saving = false;
+          pubBtn.textContent = 'Publish';
+          pubBtn.disabled = false;
+        }
+      },
+
+      /* Editor Mode */
+      setMode(mode) {
+        state.editorMode = mode;
+        document.getElementById('editorArea').dataset.mode = mode;
+        document.querySelectorAll('.mode-toggle button').forEach(b => {
+          b.classList.toggle('active', b.dataset.mode === mode);
+        });
+        if (mode !== 'edit') updatePreview();
+      },
+
+      /* Metadata Badges */
+      renderBadges() {
+        const row = document.getElementById('badgeRow');
+        const t = state.trailers;
+        let html = '';
+        const statusVal = (t.Status || t.status || '').toLowerCase();
+        if (statusVal) {
+          const cls = statusVal === 'published' ? 'badge-published' : 'badge-draft';
+          html += `<span class="badge ${cls}">${statusVal}</span>`;
+        }
+        const updated = t['Updated-at'] || t['updated-at'] || t.updatedAt || '';
+        if (updated) {
+          html += `<span class="badge badge-info">Updated: ${relTime(updated) || updated}</span>`;
+        }
+        row.innerHTML = html;
+      },
+
+      /* Trailers Grid */
+      renderTrailers() {
+        const grid = document.getElementById('trailerGrid');
+        const systemKeys = ['status', 'Status', 'updated-at', 'Updated-at', 'updatedAt'];
+        const entries = Object.entries(state.trailers).filter(([k]) => !systemKeys.includes(k));
+        grid.innerHTML = entries.map(([k, v], i) => `
+          <input type="text" value="${this.escAttr(k)}" data-idx="${i}" class="trailer-key" placeholder="Key">
+          <input type="text" value="${this.escAttr(v)}" data-idx="${i}" class="trailer-val" placeholder="Value">
+          <button class="remove-btn" onclick="UI.removeTrailerRow(${i})">&times;</button>
+        `).join('');
+      },
+
+      addTrailerRow() {
+        const grid = document.getElementById('trailerGrid');
+        const idx = grid.querySelectorAll('.trailer-key').length;
+        const frag = document.createDocumentFragment();
+        const ki = document.createElement('input');
+        ki.type = 'text'; ki.className = 'trailer-key'; ki.dataset.idx = idx; ki.placeholder = 'Key';
+        const vi = document.createElement('input');
+        vi.type = 'text'; vi.className = 'trailer-val'; vi.dataset.idx = idx; vi.placeholder = 'Value';
+        const rb = document.createElement('button');
+        rb.className = 'remove-btn'; rb.innerHTML = '&times;'; rb.onclick = () => { ki.remove(); vi.remove(); rb.remove(); };
+        frag.append(ki, vi, rb);
+        grid.appendChild(frag);
+      },
+
+      removeTrailerRow(idx) {
+        const grid = document.getElementById('trailerGrid');
+        grid.querySelectorAll(`[data-idx="${idx}"]`).forEach(el => el.remove());
+        grid.querySelectorAll('.remove-btn')[idx]?.remove();
+        // re-collect to simplify
+        state.trailers = this.collectTrailers();
+        this.renderTrailers();
+      },
+
+      collectTrailers() {
+        const result = {};
+        // Preserve system trailers
+        const systemKeys = ['status', 'Status', 'updated-at', 'Updated-at', 'updatedAt'];
+        for (const k of systemKeys) {
+          if (state.trailers[k] !== undefined) result[k] = state.trailers[k];
+        }
+        const keys = document.querySelectorAll('.trailer-key');
+        const vals = document.querySelectorAll('.trailer-val');
+        keys.forEach((kEl, i) => {
+          const k = kEl.value.trim();
+          const v = vals[i]?.value || '';
+          if (k) result[k] = v;
+        });
+        return result;
+      },
+
+      /* Upload */
+      async handleUpload(file) {
+        const slug = document.getElementById('slugInput').value.trim();
+        if (!slug) { toast('Enter a slug before uploading', 'error'); return; }
+
+        toast(`Uploading ${file.name}...`, 'info');
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+          const b64 = e.target.result.split(',')[1];
+          try {
+            const data = await api.upload({ slug, filename: file.name, data: b64 });
+            const textarea = document.getElementById('bodyInput');
+            const insert = `\n![${file.name}](${data.assetUrl})\n`;
+            const pos = textarea.selectionStart ?? textarea.value.length;
+            textarea.value = textarea.value.slice(0, pos) + insert + textarea.value.slice(pos);
+            state.dirty = true;
+            updatePreview();
+            toast(`Uploaded ${file.name}`, 'success');
+          } catch (err) {
+            toast('Upload failed: ' + err.message, 'error');
+          }
+        };
+        reader.readAsDataURL(file);
+      },
+
+      /* Helpers */
+      showEditor() {
+        document.getElementById('editorPanel').style.display = '';
+        document.getElementById('emptyState').style.display = 'none';
+      },
+
+      hideEditor() {
+        document.getElementById('editorPanel').style.display = 'none';
+        document.getElementById('emptyState').style.display = '';
+      },
+
+      highlightActive(slug) {
+        document.querySelectorAll('.article-item').forEach(el => {
+          el.classList.toggle('active', el.querySelector('.slug')?.textContent === slug);
+        });
+      },
+
+      markDirty() {
+        if (!state.dirty) {
+          state.dirty = true;
+        }
+        // Autosave for existing articles
+        this.clearAutosave();
+        if (state.currentSlug) {
+          state.autosaveTimer = setTimeout(() => this.save(), 3000);
+        }
+      },
+
+      clearAutosave() {
+        if (state.autosaveTimer) {
+          clearTimeout(state.autosaveTimer);
+          state.autosaveTimer = null;
+        }
+      },
+
+      deselect() {
+        if (state.dirty) {
+          if (!confirm('You have unsaved changes. Discard them?')) return;
+        }
+        this.clearAutosave();
+        state.currentSlug = null;
+        state.currentSha = null;
+        state.dirty = false;
+        state.trailers = {};
+        this.highlightActive(null);
+        this.hideEditor();
+      },
+
+      escAttr(s) {
+        return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+      },
+    };
+
+    /* ── Event Listeners ── */
+
+    // Input change tracking
+    document.getElementById('bodyInput').addEventListener('input', () => {
+      UI.markDirty();
+      updatePreview();
+    });
+    document.getElementById('titleInput').addEventListener('input', () => UI.markDirty());
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+        e.preventDefault();
+        if (state.currentSlug !== null || document.getElementById('slugInput').value.trim()) {
+          UI.save();
+        }
+      }
+      if (e.key === 'Escape') {
+        UI.deselect();
+      }
+    });
+
+    // Unsaved changes guard
+    window.addEventListener('beforeunload', (e) => {
+      if (state.dirty) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    });
+
+    // Drag and drop
+    const dropZone = document.getElementById('dropZone');
+    document.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.classList.add('dragover');
+    });
+    document.addEventListener('dragleave', (e) => {
+      if (!e.relatedTarget || !document.body.contains(e.relatedTarget)) {
+        dropZone.classList.remove('dragover');
+      }
+    });
+    document.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('dragover');
+      const files = e.dataTransfer?.files;
+      if (files?.length) {
+        for (const f of files) UI.handleUpload(f);
+      }
+    });
+
+    // File input
+    document.getElementById('fileInput').addEventListener('change', function () {
+      if (this.files[0]) UI.handleUpload(this.files[0]);
+      this.value = '';
+    });
+
+    /* ── Init ── */
+    UI.fetchList();
   </script>
 </body>
 </html>
