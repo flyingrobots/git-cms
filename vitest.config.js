@@ -1,14 +1,12 @@
 import { defineConfig, defaultExclude } from 'vitest/config';
-import { fileURLToPath } from 'node:url';
-import { resolve, dirname } from 'node:path';
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   resolve: {
     alias: {
-      '@git-stunts/git-warp/InMemoryGraphAdapter':
-        resolve(__dirname, 'node_modules/@git-stunts/git-warp/src/infrastructure/adapters/InMemoryGraphAdapter.js'),
+      // TODO: remove once @git-stunts/git-warp exports InMemoryGraphAdapter publicly
+      // (not in the package's "exports" map as of v10.8.0)
+      '#test/InMemoryGraphAdapter':
+        new URL('node_modules/@git-stunts/git-warp/src/infrastructure/adapters/InMemoryGraphAdapter.js', import.meta.url).pathname,
     },
   },
   test: {

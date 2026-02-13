@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import InMemoryGraphAdapter from '@git-stunts/git-warp/InMemoryGraphAdapter';
+import InMemoryGraphAdapter from '#test/InMemoryGraphAdapter';
 import CmsService from '../src/lib/CmsService.js';
 import { CmsValidationError } from '../src/lib/ContentIdentityPolicy.js';
 
