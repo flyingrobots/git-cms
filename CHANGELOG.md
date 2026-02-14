@@ -2,6 +2,12 @@
 
 All notable changes to git-cms are documented in this file.
 
+## [1.1.2] — 2026-02-14
+
+### Fixed
+
+- `migrate()` computes `to` from applied migrations instead of redundant `readLayoutVersion` re-read
+
 ## [1.1.1] — 2026-02-14
 
 ### Fixed
@@ -90,5 +96,6 @@ All notable changes to git-cms are documented in this file.
 - **(P2) walkLimit divergence:** Extracted `HISTORY_WALK_LIMIT` as a shared exported constant used by both `_validateAncestry` and the server's history limit clamp
 
 [Unreleased]: https://github.com/flyingrobots/git-cms/compare/main...git-stunts
+[1.1.2]: https://github.com/flyingrobots/git-cms/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/flyingrobots/git-cms/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/flyingrobots/git-cms/compare/v1.0.2...v1.1.0
