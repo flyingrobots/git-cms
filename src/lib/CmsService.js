@@ -23,6 +23,9 @@ import {
  * @property {import('@git-stunts/git-warp').GraphPersistencePort} [graph] - Optional injected graph adapter (skips git subprocess setup).
  */
 
+/** Maximum depth for ancestry walks (history listing, validation). */
+export const HISTORY_WALK_LIMIT = 200;
+
 /**
  * CmsService is the core domain orchestrator for Git CMS.
  */
@@ -250,7 +253,7 @@ export default class CmsService {
     // Read current draft content and re-commit with status: unpublished
     const message = await this.graph.showNode(draftSha);
     const decoded = this.codec.decode(message);
-    const { updatedat: _, ...restTrailers } = decoded.trailers;
+    const { updatedat: _, ...restTrailers } = decoded.trailers || {};
     const newMessage = this.codec.encode({
       title: decoded.title,
       body: decoded.body,
@@ -299,12 +302,160 @@ export default class CmsService {
     const parentCommitSha = info.parents[0];
     const parentMessage = await this.graph.showNode(parentCommitSha);
     const parentDecoded = this.codec.decode(parentMessage);
-    const { updatedat: _u, ...restParentTrailers } = parentDecoded.trailers;
+    const { updatedat: _u, ...restParentTrailers } = parentDecoded.trailers || {};
 
     const newMessage = this.codec.encode({
       title: parentDecoded.title,
       body: parentDecoded.body,
       trailers: { ...restParentTrailers, status: STATES.REVERTED, updatedAt: new Date().toISOString() },
+    });
+
+    const newSha = await this.graph.commitNode({
+      message: newMessage,
+      parents: [draftSha],
+      sign: process.env.CMS_SIGN === '1',
+    });
+
+    await this._updateRef({ ref: draftRef, newSha, oldSha: draftSha });
+    return { ref: draftRef, sha: newSha, prev: draftSha };
+  }
+
+  /**
+   * Validates that a target SHA exists in an article's ancestry chain.
+   * @private
+   */
+  async _validateAncestry(tipSha, targetSha, slug) {
+    let walk = tipSha;
+    let steps = 0;
+    const walkLimit = HISTORY_WALK_LIMIT;
+    while (walk && steps < walkLimit) {
+      if (walk === targetSha) return;
+      const info = await this.graph.getNodeInfo(walk);
+      walk = info.parents?.[0] || null;
+      steps++;
+    }
+    if (steps >= walkLimit) {
+      throw new CmsValidationError(
+        `History walk limit (${walkLimit}) exceeded for article "${slug}"; SHA "${targetSha}" may exist beyond the search window`,
+        { code: 'history_walk_limit_exceeded', field: 'sha' }
+      );
+    }
+    throw new CmsValidationError(
+      `SHA "${targetSha}" is not in the history of article "${slug}"`,
+      { code: 'invalid_version_for_article', field: 'sha' }
+    );
+  }
+
+  /**
+   * Returns version history for an article by walking the parent chain.
+   * @param {{ slug: string, limit?: number }} options
+   * @returns {Promise<Array<{ sha: string, title: string, status: string, author: string, date: string }>>}
+   */
+  async getArticleHistory({ slug, limit = 50 }) {
+    const effectiveLimit = Math.max(1, Math.min(limit, HISTORY_WALK_LIMIT));
+    const canonicalSlug = canonicalizeSlug(slug);
+    const draftRef = this._refFor(canonicalSlug, 'articles');
+    const pubRef = this._refFor(canonicalSlug, 'published');
+    const sha = await this.graph.readRef(draftRef) || await this.graph.readRef(pubRef);
+
+    if (!sha) {
+      throw new CmsValidationError(
+        `Article not found: "${canonicalSlug}"`,
+        { code: 'article_not_found', field: 'slug' }
+      );
+    }
+
+    const versions = [];
+    let current = sha;
+
+    while (current && versions.length < effectiveLimit) {
+      const [info, message] = await Promise.all([
+        this.graph.getNodeInfo(current),
+        this.graph.showNode(current),
+      ]);
+      const decoded = this.codec.decode(message);
+
+      versions.push({
+        sha: current,
+        title: decoded.title,
+        status: decoded.trailers?.status || 'draft',
+        author: info.author,
+        date: info.date,
+      });
+
+      current = info.parents?.[0] || null;
+    }
+
+    return versions;
+  }
+
+  /**
+   * Reads full content of a specific commit by SHA.
+   * @param {{ slug: string, sha: string }} options
+   * @returns {Promise<{ sha: string, title: string, body: string, trailers: object }>}
+   */
+  async readVersion({ slug, sha }) {
+    const canonicalSlug = canonicalizeSlug(slug);
+    const draftRef = this._refFor(canonicalSlug, 'articles');
+    const pubRef = this._refFor(canonicalSlug, 'published');
+    const tipSha = await this.graph.readRef(draftRef) || await this.graph.readRef(pubRef);
+
+    if (!tipSha) {
+      throw new CmsValidationError(
+        `Article not found: "${canonicalSlug}"`,
+        { code: 'article_not_found', field: 'slug' }
+      );
+    }
+
+    // Ancestry validation: verify SHA belongs to this article's lineage
+    await this._validateAncestry(tipSha, sha, canonicalSlug);
+
+    const message = await this.graph.showNode(sha);
+    const decoded = this.codec.decode(message);
+    return { sha, title: decoded.title, body: decoded.body, trailers: decoded.trailers || {} };
+  }
+
+  /**
+   * Restores content from a historical SHA as a new draft commit.
+   * @param {{ slug: string, sha: string }} options
+   * @returns {Promise<{ ref: string, sha: string, prev: string }>}
+   */
+  async restoreVersion({ slug, sha }) {
+    const canonicalSlug = canonicalizeSlug(slug);
+    const draftRef = this._refFor(canonicalSlug, 'articles');
+
+    const { effectiveState, draftSha } = await this._resolveArticleState(canonicalSlug);
+    validateTransition(effectiveState, STATES.DRAFT);
+
+    if (!draftSha) {
+      throw new CmsValidationError(
+        `Cannot restore "${canonicalSlug}": no draft ref exists`,
+        { code: 'no_draft', field: 'slug' }
+      );
+    }
+
+    // Ancestry validation: walk parent chain to verify target SHA belongs to this article
+    await this._validateAncestry(draftSha, sha, canonicalSlug);
+
+    // Read target SHA content
+    const targetMessage = await this.graph.showNode(sha);
+    const decoded = this.codec.decode(targetMessage);
+    // trailer-codec normalizes keys to lowercase on decode; destructure the
+    // lowercase forms so the subsequent camelCase writes create fresh keys.
+    const trailers = decoded.trailers || {};
+    const { updatedat: _, restoredfromsha: _r, restoredat: _ra, ...restTrailers } = trailers;
+
+    const now = new Date().toISOString();
+    const newMessage = this.codec.encode({
+      title: decoded.title,
+      body: decoded.body,
+      trailers: {
+        ...restTrailers,
+        status: STATES.DRAFT,
+        updatedAt: now,
+        restoredFromSha: sha,
+        restoredAt: now,
+      },
     });
 
     const newSha = await this.graph.commitNode({

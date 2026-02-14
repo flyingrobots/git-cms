@@ -359,6 +359,50 @@
       margin-top: var(--size-2);
     }
 
+    /* ── History Section ── */
+    #historySection .history-list {
+      max-height: 240px;
+      overflow-y: auto;
+      margin-top: var(--size-2);
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .history-item {
+      display: flex;
+      align-items: center;
+      gap: var(--size-3);
+      padding: var(--size-2) var(--size-3);
+      border-radius: var(--radius-2);
+      cursor: pointer;
+      transition: background 0.15s;
+      font-size: var(--font-size-0);
+    }
+    .history-item:hover { background: var(--surface-3); }
+    .history-item.active { background: var(--brand); color: white; }
+    .history-item .hist-sha { font-family: var(--font-mono); font-size: var(--font-size-00); opacity: 0.7; }
+    .history-item .hist-title { flex: 1; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .history-item .hist-date { font-size: var(--font-size-00); opacity: 0.7; white-space: nowrap; }
+    .history-item .hist-status { font-size: var(--font-size-00); opacity: 0.7; }
+
+    #historyPreview {
+      margin-top: var(--size-3);
+      border: 1px solid var(--surface-3);
+      border-radius: var(--radius-2);
+      padding: var(--size-3);
+      display: none;
+    }
+    #historyPreview .preview-content {
+      max-height: 300px;
+      overflow-y: auto;
+      line-height: 1.7;
+    }
+    #historyPreview .preview-actions {
+      margin-top: var(--size-3);
+      display: flex;
+      gap: var(--size-2);
+    }
+
     /* ── Status Bar ── */
     .status-bar {
       font-size: var(--font-size-0);
@@ -457,6 +501,17 @@
       <button class="btn add-trailer-btn" onclick="UI.addTrailerRow()">+ Add Field</button>
     </details>
 
+    <details id="historySection">
+      <summary>Version History</summary>
+      <div id="historyList" class="history-list"></div>
+      <div id="historyPreview">
+        <div id="historyPreviewContent" class="preview-content"></div>
+        <div class="preview-actions">
+          <button class="btn btn-primary" id="restoreBtn" onclick="UI.restoreVersion()" disabled>Restore This Version</button>
+        </div>
+      </div>
+    </details>
+
     <div class="asset-section" id="dropZone">
       Drop files here or
       <label class="btn" style="margin-left:var(--size-2)">
@@ -490,6 +545,8 @@
       autosaveTimer: null,
       editorMode: 'split',
       trailers: {},
+      historyVersions: [],
+      selectedVersion: null,
     };
 
     /* ── API Layer ── */
@@ -536,6 +593,30 @@
         });
         if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
         return res.json();
+      },
+
+      async history(slug, limit = 50) {
+        const res = await fetch(`${API_BASE}/history?slug=${encodeURIComponent(slug)}&limit=${limit}`);
+        if (!res.ok) throw new Error(`History failed: ${res.status}`);
+        return res.json();
+      },
+
+      async showVersion(slug, sha) {
+        const res = await fetch(`${API_BASE}/show-version?slug=${encodeURIComponent(slug)}&sha=${encodeURIComponent(sha)}`);
+        if (!res.ok) throw new Error(`Show version failed: ${res.status}`);
+        return res.json();
+      },
+
+      async restore({ slug, sha }) {
+        const res = await fetch(`${API_BASE}/restore`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ slug, sha }),
+        });
+        let data;
+        try { data = await res.json(); } catch { data = {}; }
+        if (!res.ok) throw Object.assign(new Error(data.error || `Restore failed: ${res.status}`), { code: data.code });
+        return data;
       },
     };
 
@@ -638,6 +719,17 @@
           updatePreview();
           this.highlightActive(slug);
 
+          // Reset history state and DOM to prevent stale data from previous article
+          state.historyVersions = [];
+          state.selectedVersion = null;
+          document.getElementById('historyList').innerHTML = '';
+          document.getElementById('historyPreview').style.display = 'none';
+
+          // Refresh history if panel is already open
+          if (document.getElementById('historySection').open) {
+            this.fetchHistory();
+          }
+
           statusEl.textContent = `Loaded ${slug} (${data.sha.slice(0, 7)})`;
         } catch (err) {
           toast(`Failed to load ${slug}`, 'error');
@@ -655,6 +747,13 @@
         state.currentSha = null;
         state.dirty = false;
         state.trailers = {};
+
+        // Reset history panel to prevent stale data
+        document.getElementById('historySection').open = false;
+        document.getElementById('historyList').innerHTML = '';
+        document.getElementById('historyPreview').style.display = 'none';
+        state.historyVersions = [];
+        state.selectedVersion = null;
 
         document.getElementById('slugInput').value = '';
         document.getElementById('slugInput').disabled = false;
@@ -903,6 +1002,101 @@
         this.hideEditor();
       },
 
+      /* Version History */
+      async fetchHistory() {
+        if (!state.currentSlug) return;
+        const listEl = document.getElementById('historyList');
+        listEl.innerHTML = '<div class="skeleton" style="height:1.8em"></div>';
+        document.getElementById('historyPreview').style.display = 'none';
+        state.selectedVersion = null;
+
+        try {
+          const versions = await api.history(state.currentSlug);
+          state.historyVersions = versions;
+          listEl.innerHTML = '';
+
+          versions.forEach((v, idx) => {
+            const div = document.createElement('div');
+            div.className = 'history-item';
+            div.dataset.idx = idx;
+
+            const shaSpan = document.createElement('span');
+            shaSpan.className = 'hist-sha';
+            shaSpan.textContent = v.sha.slice(0, 7);
+
+            const titleSpan = document.createElement('span');
+            titleSpan.className = 'hist-title';
+            titleSpan.textContent = v.title;
+
+            const statusSpan = document.createElement('span');
+            statusSpan.className = 'hist-status';
+            statusSpan.textContent = v.status;
+
+            const dateSpan = document.createElement('span');
+            dateSpan.className = 'hist-date';
+            dateSpan.textContent = relTime(v.date);
+
+            div.append(shaSpan, titleSpan, statusSpan, dateSpan);
+            div.onclick = () => this.selectVersion(v.sha, idx);
+            listEl.appendChild(div);
+          });
+        } catch (err) {
+          toast('Failed to load history', 'error');
+          listEl.innerHTML = '';
+        }
+      },
+
+      async selectVersion(sha, idx) {
+        state.selectedVersion = { sha, idx };
+        document.querySelectorAll('.history-item').forEach((el, i) => {
+          el.classList.toggle('active', i === idx);
+        });
+
+        const previewEl = document.getElementById('historyPreview');
+        const contentEl = document.getElementById('historyPreviewContent');
+        const restoreBtn = document.getElementById('restoreBtn');
+
+        previewEl.style.display = 'block';
+        contentEl.innerHTML = '<div class="skeleton" style="height:4em"></div>';
+
+        try {
+          const data = await api.showVersion(state.currentSlug, sha);
+          if (state.selectedVersion?.sha !== sha) return;
+          contentEl.innerHTML = DOMPurify.sanitize(marked.parse(data.body || ''));
+          // Disable restore for current version (idx 0)
+          restoreBtn.disabled = idx === 0;
+        } catch (err) {
+          if (state.selectedVersion?.sha !== sha) return;
+          contentEl.textContent = 'Failed to load version content';
+          restoreBtn.disabled = true;
+        }
+      },
+
+      async restoreVersion() {
+        if (!state.selectedVersion || !state.currentSlug || state.saving) return;
+        const { sha } = state.selectedVersion;
+        if (!confirm(`Restore version ${sha.slice(0, 7)}? This creates a new draft with the old content.`)) return;
+
+        // Prevent autosave from racing the restore and suppress
+        // the redundant "unsaved changes" prompt in loadArticle.
+        this.clearAutosave();
+        state.dirty = false;
+
+        try {
+          await api.restore({ slug: state.currentSlug, sha });
+          toast('Version restored', 'success');
+          // Close history section and reload article
+          document.getElementById('historySection').open = false;
+          await this.loadArticle(state.currentSlug);
+        } catch (err) {
+          if (err.code === 'invalid_state_transition') {
+            toast('Cannot restore: unpublish the article first', 'error');
+          } else {
+            toast('Restore failed: ' + err.message, 'error');
+          }
+        }
+      },
+
       escAttr(s) {
         return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/'/g, '&#39;');
       },
@@ -965,6 +1159,11 @@
     document.getElementById('fileInput').addEventListener('change', function () {
       if (this.files[0]) UI.handleUpload(this.files[0]);
       this.value = '';
+    });
+
+    // History section toggle — lazy-fetch on expand
+    document.getElementById('historySection').addEventListener('toggle', (e) => {
+      if (e.target.open) UI.fetchHistory();
     });
 
     /* ── Init ── */

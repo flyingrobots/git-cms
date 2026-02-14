@@ -274,3 +274,169 @@ describe('State Machine', () => {
     );
   });
 });
+
+describe('Version History', () => {
+  let cms;
+
+  beforeEach(() => {
+    cms = createTestCms();
+  });
+
+  it('getArticleHistory returns versions newest-first', async () => {
+    await cms.saveSnapshot({ slug: 'hist-order', title: 'v1', body: 'b1' });
+    await cms.saveSnapshot({ slug: 'hist-order', title: 'v2', body: 'b2' });
+    await cms.saveSnapshot({ slug: 'hist-order', title: 'v3', body: 'b3' });
+
+    const history = await cms.getArticleHistory({ slug: 'hist-order' });
+    expect(history).toHaveLength(3);
+    expect(history[0].title).toBe('v3');
+    expect(history[1].title).toBe('v2');
+    expect(history[2].title).toBe('v1');
+  });
+
+  it('getArticleHistory includes correct status per version', async () => {
+    await cms.saveSnapshot({ slug: 'hist-status', title: 'v1', body: 'b1' });
+    await cms.saveSnapshot({ slug: 'hist-status', title: 'v2', body: 'b2' });
+    await cms.revertArticle({ slug: 'hist-status' });
+
+    const history = await cms.getArticleHistory({ slug: 'hist-status' });
+    expect(history[0].status).toBe('reverted');
+    expect(history[1].status).toBe('draft');
+    expect(history[2].status).toBe('draft');
+  });
+
+  it('getArticleHistory respects limit', async () => {
+    await cms.saveSnapshot({ slug: 'hist-limit', title: 'v1', body: 'b1' });
+    await cms.saveSnapshot({ slug: 'hist-limit', title: 'v2', body: 'b2' });
+    await cms.saveSnapshot({ slug: 'hist-limit', title: 'v3', body: 'b3' });
+
+    const history = await cms.getArticleHistory({ slug: 'hist-limit', limit: 2 });
+    expect(history).toHaveLength(2);
+    expect(history[0].title).toBe('v3');
+    expect(history[1].title).toBe('v2');
+  });
+
+  it('getArticleHistory throws for nonexistent article', async () => {
+    await expect(cms.getArticleHistory({ slug: 'no-such-article' })).rejects.toMatchObject({
+      name: 'CmsValidationError',
+      code: 'article_not_found',
+    });
+  });
+
+  it('getArticleHistory returns single entry for 1-version article', async () => {
+    await cms.saveSnapshot({ slug: 'hist-single', title: 'only', body: 'one' });
+
+    const history = await cms.getArticleHistory({ slug: 'hist-single' });
+    expect(history).toHaveLength(1);
+    expect(history[0].title).toBe('only');
+  });
+
+  it('readVersion returns full content for a specific SHA', async () => {
+    const v1 = await cms.saveSnapshot({ slug: 'rv-test', title: 'First', body: 'first body' });
+    await cms.saveSnapshot({ slug: 'rv-test', title: 'Second', body: 'second body' });
+
+    const version = await cms.readVersion({ slug: 'rv-test', sha: v1.sha });
+    expect(version.sha).toBe(v1.sha);
+    expect(version.title).toBe('First');
+    expect(version.body).toContain('first body');
+  });
+
+  it('readVersion throws for nonexistent article', async () => {
+    await expect(cms.readVersion({ slug: 'no-such-slug', sha: 'a'.repeat(40) })).rejects.toMatchObject({
+      name: 'CmsValidationError',
+      code: 'article_not_found',
+    });
+  });
+
+  it('readVersion throws for SHA outside article lineage', async () => {
+    await cms.saveSnapshot({ slug: 'rv-lineage-a', title: 'A', body: 'a' });
+    const other = await cms.saveSnapshot({ slug: 'rv-lineage-b', title: 'B', body: 'b' });
+
+    await expect(cms.readVersion({ slug: 'rv-lineage-a', sha: other.sha })).rejects.toMatchObject({
+      name: 'CmsValidationError',
+      code: 'invalid_version_for_article',
+    });
+  });
+
+  it('restoreVersion creates new commit with old content', async () => {
+    const v1 = await cms.saveSnapshot({ slug: 'restore-test', title: 'Original', body: 'original body' });
+    await cms.saveSnapshot({ slug: 'restore-test', title: 'Edited', body: 'edited body' });
+
+    const result = await cms.restoreVersion({ slug: 'restore-test', sha: v1.sha });
+    expect(result.sha).not.toBe(v1.sha);
+
+    const article = await cms.readArticle({ slug: 'restore-test' });
+    expect(article.title).toBe('Original');
+    expect(article.body).toContain('original body');
+    expect(article.trailers.status).toBe('draft');
+  });
+
+  it('restoreVersion preserves history chain (commit count)', async () => {
+    await cms.saveSnapshot({ slug: 'restore-chain', title: 'v1', body: 'b1' });
+    const v2 = await cms.saveSnapshot({ slug: 'restore-chain', title: 'v2', body: 'b2' });
+    await cms.saveSnapshot({ slug: 'restore-chain', title: 'v3', body: 'b3' });
+
+    await cms.restoreVersion({ slug: 'restore-chain', sha: v2.sha });
+
+    // After 3 saves + 1 restore = 4 versions in history
+    const history = await cms.getArticleHistory({ slug: 'restore-chain' });
+    expect(history).toHaveLength(4);
+  });
+
+  it('restoreVersion blocks on published articles', async () => {
+    const v1 = await cms.saveSnapshot({ slug: 'restore-pub', title: 'v1', body: 'b1' });
+    await cms.saveSnapshot({ slug: 'restore-pub', title: 'v2', body: 'b2' });
+    await cms.publishArticle({ slug: 'restore-pub' });
+
+    await expect(cms.restoreVersion({ slug: 'restore-pub', sha: v1.sha })).rejects.toMatchObject({
+      name: 'CmsValidationError',
+      code: 'invalid_state_transition',
+    });
+  });
+
+  it('restoreVersion works on unpublished articles', async () => {
+    const v1 = await cms.saveSnapshot({ slug: 'restore-unpub', title: 'v1', body: 'b1' });
+    await cms.saveSnapshot({ slug: 'restore-unpub', title: 'v2', body: 'b2' });
+    await cms.publishArticle({ slug: 'restore-unpub' });
+    await cms.unpublishArticle({ slug: 'restore-unpub' });
+
+    const result = await cms.restoreVersion({ slug: 'restore-unpub', sha: v1.sha });
+    expect(result.sha).toBeDefined();
+
+    const article = await cms.readArticle({ slug: 'restore-unpub' });
+    expect(article.title).toBe('v1');
+  });
+
+  it('restoreVersion works on reverted articles', async () => {
+    const v1 = await cms.saveSnapshot({ slug: 'restore-rev', title: 'v1', body: 'b1' });
+    await cms.saveSnapshot({ slug: 'restore-rev', title: 'v2', body: 'b2' });
+    await cms.revertArticle({ slug: 'restore-rev' });
+
+    const result = await cms.restoreVersion({ slug: 'restore-rev', sha: v1.sha });
+    expect(result.sha).toBeDefined();
+
+    const article = await cms.readArticle({ slug: 'restore-rev' });
+    expect(article.title).toBe('v1');
+  });
+
+  it('restoreVersion throws for SHA outside article lineage', async () => {
+    await cms.saveSnapshot({ slug: 'restore-lineage-a', title: 'A', body: 'a' });
+    const other = await cms.saveSnapshot({ slug: 'restore-lineage-b', title: 'B', body: 'b' });
+
+    await expect(cms.restoreVersion({ slug: 'restore-lineage-a', sha: other.sha })).rejects.toMatchObject({
+      name: 'CmsValidationError',
+      code: 'invalid_version_for_article',
+    });
+  });
+
+  it('restoreVersion includes provenance trailers (restoredFromSha, restoredAt)', async () => {
+    const v1 = await cms.saveSnapshot({ slug: 'restore-prov', title: 'v1', body: 'b1' });
+    await cms.saveSnapshot({ slug: 'restore-prov', title: 'v2', body: 'b2' });
+
+    await cms.restoreVersion({ slug: 'restore-prov', sha: v1.sha });
+
+    const article = await cms.readArticle({ slug: 'restore-prov' });
+    expect(article.trailers.restoredfromsha).toBe(v1.sha);
+    expect(article.trailers.restoredat).toBeDefined();
+  });
+});
