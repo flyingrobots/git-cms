@@ -189,10 +189,10 @@ describe('State Machine', () => {
     });
   });
 
-  it('revert with nonexistent slug throws no_draft', async () => {
+  it('revert with nonexistent slug throws article_not_found', async () => {
     await expect(cms.revertArticle({ slug: 'no-such-slug' })).rejects.toMatchObject({
       name: 'CmsValidationError',
-      code: 'no_draft',
+      code: 'article_not_found',
     });
   });
 

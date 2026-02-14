@@ -102,6 +102,13 @@ export default class CmsService {
     const draftSha = await this.graph.readRef(draftRef);
     const pubSha = await this.graph.readRef(pubRef);
 
+    if (!draftSha && !pubSha) {
+      throw new CmsValidationError(
+        `Article not found: "${slug}"`,
+        { code: 'article_not_found', field: 'slug' }
+      );
+    }
+
     let draftStatus = STATES.DRAFT;
     if (draftSha) {
       const message = await this.graph.showNode(draftSha);
@@ -243,10 +250,11 @@ export default class CmsService {
     // Read current draft content and re-commit with status: unpublished
     const message = await this.graph.showNode(draftSha);
     const decoded = this.codec.decode(message);
+    const { updatedat: _, ...restTrailers } = decoded.trailers;
     const newMessage = this.codec.encode({
       title: decoded.title,
       body: decoded.body,
-      trailers: { ...decoded.trailers, status: STATES.UNPUBLISHED, updatedat: new Date().toISOString() },
+      trailers: { ...restTrailers, status: STATES.UNPUBLISHED, updatedAt: new Date().toISOString() },
     });
 
     const newSha = await this.graph.commitNode({
@@ -291,11 +299,12 @@ export default class CmsService {
     const parentCommitSha = info.parents[0];
     const parentMessage = await this.graph.showNode(parentCommitSha);
     const parentDecoded = this.codec.decode(parentMessage);
+    const { updatedat: _u, ...restParentTrailers } = parentDecoded.trailers;
 
     const newMessage = this.codec.encode({
       title: parentDecoded.title,
       body: parentDecoded.body,
-      trailers: { ...parentDecoded.trailers, status: STATES.REVERTED, updatedat: new Date().toISOString() },
+      trailers: { ...restParentTrailers, status: STATES.REVERTED, updatedAt: new Date().toISOString() },
     });
 
     const newSha = await this.graph.commitNode({
