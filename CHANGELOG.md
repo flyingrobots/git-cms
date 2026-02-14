@@ -2,6 +2,34 @@
 
 All notable changes to git-cms are documented in this file.
 
+## [1.1.3] — 2026-02-14
+
+### Fixed
+
+- `migrate()` JSDoc now documents TOCTOU / concurrency limitation
+
+## [1.1.2] — 2026-02-14
+
+### Fixed
+
+- `migrate()` computes `to` from applied migrations instead of redundant `readLayoutVersion` re-read
+
+## [1.1.1] — 2026-02-14
+
+### Fixed
+
+- `readLayoutVersion` now rejects empty/whitespace-only config values (`Number('')` was silently treated as version 0)
+- `writeLayoutVersion` validates input (rejects NaN, Infinity, floats, negatives) to prevent storing invalid versions
+- `MIGRATIONS` array and entries frozen with `Object.freeze` for immutability consistency
+
+## [1.1.0] — 2026-02-14
+
+### Added
+
+- **Layout Specification v1** (`docs/LAYOUT_SPEC.md`): Formalizes ref namespace, state derivation rules, commit format, config keys, and migration policy (M1.3)
+- **Migration framework** (`src/lib/LayoutMigration.js`): `readLayoutVersion`, `writeLayoutVersion`, `pendingMigrations`, `migrate` — forward-only, idempotent layout migrations stored in `cms.layout.version` git config
+- **CLI commands:** `git-cms migrate` (run pending migrations) and `git-cms layout-version` (print repo + codebase versions)
+
 ## [Unreleased] — git-stunts branch
 
 ### Added
@@ -74,3 +102,7 @@ All notable changes to git-cms are documented in this file.
 - **(P2) walkLimit divergence:** Extracted `HISTORY_WALK_LIMIT` as a shared exported constant used by both `_validateAncestry` and the server's history limit clamp
 
 [Unreleased]: https://github.com/flyingrobots/git-cms/compare/main...git-stunts
+[1.1.3]: https://github.com/flyingrobots/git-cms/compare/v1.1.2...v1.1.3
+[1.1.2]: https://github.com/flyingrobots/git-cms/compare/v1.1.1...v1.1.2
+[1.1.1]: https://github.com/flyingrobots/git-cms/compare/v1.1.0...v1.1.1
+[1.1.0]: https://github.com/flyingrobots/git-cms/compare/v1.0.2...v1.1.0
