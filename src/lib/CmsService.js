@@ -250,7 +250,7 @@ export default class CmsService {
     // Read current draft content and re-commit with status: unpublished
     const message = await this.graph.showNode(draftSha);
     const decoded = this.codec.decode(message);
-    const { updatedat: _, ...restTrailers } = decoded.trailers;
+    const { updatedat: _, ...restTrailers } = decoded.trailers || {};
     const newMessage = this.codec.encode({
       title: decoded.title,
       body: decoded.body,
@@ -299,7 +299,7 @@ export default class CmsService {
     const parentCommitSha = info.parents[0];
     const parentMessage = await this.graph.showNode(parentCommitSha);
     const parentDecoded = this.codec.decode(parentMessage);
-    const { updatedat: _u, ...restParentTrailers } = parentDecoded.trailers;
+    const { updatedat: _u, ...restParentTrailers } = parentDecoded.trailers || {};
 
     const newMessage = this.codec.encode({
       title: parentDecoded.title,
