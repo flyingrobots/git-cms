@@ -23,6 +23,9 @@ import {
  * @property {import('@git-stunts/git-warp').GraphPersistencePort} [graph] - Optional injected graph adapter (skips git subprocess setup).
  */
 
+/** Maximum depth for ancestry walks (history listing, validation). */
+export const HISTORY_WALK_LIMIT = 200;
+
 /**
  * CmsService is the core domain orchestrator for Git CMS.
  */
@@ -324,7 +327,7 @@ export default class CmsService {
   async _validateAncestry(tipSha, targetSha, slug) {
     let walk = tipSha;
     let steps = 0;
-    const walkLimit = 200;
+    const walkLimit = HISTORY_WALK_LIMIT;
     while (walk && steps < walkLimit) {
       if (walk === targetSha) return;
       const info = await this.graph.getNodeInfo(walk);

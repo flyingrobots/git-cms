@@ -3,7 +3,7 @@ import url from 'node:url';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import CmsService from '../lib/CmsService.js';
+import CmsService, { HISTORY_WALK_LIMIT } from '../lib/CmsService.js';
 import {
   CmsValidationError,
   canonicalizeKind,
@@ -212,7 +212,7 @@ async function handler(req, res) {
           const { slug: rawSlug, limit: rawLimit } = query;
           if (!rawSlug) return send(res, 400, { error: 'slug required' });
           const slug = canonicalizeSlug(rawSlug);
-          const limit = Math.max(1, Math.min(200, parseInt(rawLimit, 10) || 50));
+          const limit = Math.max(1, Math.min(HISTORY_WALK_LIMIT, parseInt(rawLimit, 10) || 50));
           return send(res, 200, await cms.getArticleHistory({ slug, limit }));
         } catch (err) {
           logError(err);
