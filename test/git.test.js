@@ -341,6 +341,23 @@ describe('Version History', () => {
     expect(version.body).toContain('first body');
   });
 
+  it('readVersion throws for nonexistent article', async () => {
+    await expect(cms.readVersion({ slug: 'no-such-slug', sha: 'a'.repeat(40) })).rejects.toMatchObject({
+      name: 'CmsValidationError',
+      code: 'article_not_found',
+    });
+  });
+
+  it('readVersion throws for SHA outside article lineage', async () => {
+    await cms.saveSnapshot({ slug: 'rv-lineage-a', title: 'A', body: 'a' });
+    const other = await cms.saveSnapshot({ slug: 'rv-lineage-b', title: 'B', body: 'b' });
+
+    await expect(cms.readVersion({ slug: 'rv-lineage-a', sha: other.sha })).rejects.toMatchObject({
+      name: 'CmsValidationError',
+      code: 'invalid_version_for_article',
+    });
+  });
+
   it('restoreVersion creates new commit with old content', async () => {
     const v1 = await cms.saveSnapshot({ slug: 'restore-test', title: 'Original', body: 'original body' });
     await cms.saveSnapshot({ slug: 'restore-test', title: 'Edited', body: 'edited body' });

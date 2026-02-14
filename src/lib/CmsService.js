@@ -393,7 +393,8 @@ export default class CmsService {
   async readVersion({ slug, sha }) {
     const canonicalSlug = canonicalizeSlug(slug);
     const draftRef = this._refFor(canonicalSlug, 'articles');
-    const tipSha = await this.graph.readRef(draftRef);
+    const pubRef = this._refFor(canonicalSlug, 'published');
+    const tipSha = await this.graph.readRef(draftRef) || await this.graph.readRef(pubRef);
 
     if (!tipSha) {
       throw new CmsValidationError(

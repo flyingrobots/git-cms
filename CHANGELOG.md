@@ -47,6 +47,9 @@ All notable changes to git-cms are documented in this file.
 - **(P2) SRI hashes:** Add `integrity` + `crossorigin` to marked and DOMPurify CDN script tags
 - **(P2) Null guards:** `revertArticle` and `unpublishArticle` throw `no_draft` when draft ref is missing; `_resolveArticleState` throws `article_not_found` when both draft and published refs are missing
 - **(P2) uploadAsset DI guard:** Throw `unsupported_in_di_mode` when `cas`/`vault` are null
+- **(P1) Path traversal in upload handler:** Sanitize user-controlled `filename` to `path.basename()` preventing writes outside tmpDir
+- **(P1) readVersion lineage scoping:** `readVersion` now validates SHA ancestry (prevents cross-article content leakage)
+- **(P1) readVersion published fallback:** `readVersion` checks both draft and published refs (consistent with `getArticleHistory`)
 - **(P2) Trailer key casing:** Use camelCase `updatedAt` in `unpublishArticle` and `revertArticle` (was lowercase `updatedat` which broke `renderBadges` lookups); destructure out decoded lowercase key before spreading to avoid `TrailerInvalidError`
 - **(P2) XSS in `escAttr`:** Escape single quotes (`'` → `&#39;`) to prevent injection into single-quoted attributes
 - **(P2) Supply-chain hardening:** Vendor Open Props CSS files locally (`public/css/`) instead of `@import` from unpkg, eliminating CDN dependency and SRI gap

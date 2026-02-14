@@ -1058,7 +1058,7 @@
       },
 
       async restoreVersion() {
-        if (!state.selectedVersion || !state.currentSlug) return;
+        if (!state.selectedVersion || !state.currentSlug || state.saving) return;
         const { sha } = state.selectedVersion;
         if (!confirm(`Restore version ${sha.slice(0, 7)}? This creates a new draft with the old content.`)) return;
 

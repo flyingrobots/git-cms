@@ -308,6 +308,24 @@ describe('Server API (Integration)', () => {
     expect(data.error).toBeDefined();
   });
 
+  it('GET /show-version returns 400 for invalid SHA format', async () => {
+    const res = await fetch(`${baseUrl}/api/cms/show-version?slug=test&sha=not-a-valid-sha`);
+    const data = await res.json();
+    expect(res.status).toBe(400);
+    expect(data.error).toMatch(/sha/);
+  });
+
+  it('POST /restore returns 400 for invalid SHA format', async () => {
+    const res = await fetch(`${baseUrl}/api/cms/restore`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slug: 'test', sha: 'ZZZZ' }),
+    });
+    const data = await res.json();
+    expect(res.status).toBe(400);
+    expect(data.error).toMatch(/sha/);
+  });
+
   it('returns 400 with invalid_state_transition for bad transitions', async () => {
     // Create a draft, then try to unpublish it (invalid: draft → unpublished)
     const setupRes = await fetch(`${baseUrl}/api/cms/snapshot`, {

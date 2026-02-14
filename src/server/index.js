@@ -263,9 +263,13 @@ async function handler(req, res) {
           const { slug: rawSlug, filename, data } = JSON.parse(body || '{}');
           if (!rawSlug || !filename || !data) return send(res, 400, { error: 'slug, filename, data required' });
           const slug = canonicalizeSlug(rawSlug);
+          const safeFilename = path.basename(filename);
+          if (!safeFilename || safeFilename === '.' || safeFilename === '..') {
+            return send(res, 400, { error: 'Invalid filename' });
+          }
 
           const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cms-upload-'));
-          const filePath = path.join(tmpDir, filename);
+          const filePath = path.join(tmpDir, safeFilename);
           fs.writeFileSync(filePath, Buffer.from(data, 'base64'));
 
           const result = await cms.uploadAsset({ slug, filePath, filename });
