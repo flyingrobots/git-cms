@@ -49,6 +49,14 @@ describe('readLayoutVersion', () => {
       code: 'layout_version_invalid',
     });
   });
+
+  it('throws on empty string value', async () => {
+    await graph.configSet(LAYOUT_VERSION_KEY, '');
+    await expect(readLayoutVersion(graph)).rejects.toMatchObject({
+      name: 'CmsValidationError',
+      code: 'layout_version_invalid',
+    });
+  });
 });
 
 describe('writeLayoutVersion', () => {
@@ -56,6 +64,30 @@ describe('writeLayoutVersion', () => {
     const graph = new InMemoryGraphAdapter();
     await writeLayoutVersion(graph, 1);
     expect(await graph.configGet(LAYOUT_VERSION_KEY)).toBe('1');
+  });
+
+  it('rejects negative version', async () => {
+    const graph = new InMemoryGraphAdapter();
+    await expect(writeLayoutVersion(graph, -1)).rejects.toMatchObject({
+      name: 'CmsValidationError',
+      code: 'layout_version_invalid',
+    });
+  });
+
+  it('rejects fractional version', async () => {
+    const graph = new InMemoryGraphAdapter();
+    await expect(writeLayoutVersion(graph, 1.5)).rejects.toMatchObject({
+      name: 'CmsValidationError',
+      code: 'layout_version_invalid',
+    });
+  });
+
+  it('rejects NaN', async () => {
+    const graph = new InMemoryGraphAdapter();
+    await expect(writeLayoutVersion(graph, NaN)).rejects.toMatchObject({
+      name: 'CmsValidationError',
+      code: 'layout_version_invalid',
+    });
   });
 });
 

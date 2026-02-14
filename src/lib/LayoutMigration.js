@@ -23,6 +23,12 @@ export const LAYOUT_VERSION_KEY = 'cms.layout.version';
 export async function readLayoutVersion(graph) {
   const raw = await graph.configGet(LAYOUT_VERSION_KEY);
   if (raw === null) return 0;
+  if (raw.trim() === '') {
+    throw new CmsValidationError(
+      `Invalid layout version in config: "${raw}"`,
+      { code: 'layout_version_invalid', field: LAYOUT_VERSION_KEY }
+    );
+  }
   const version = Number(raw);
   if (!Number.isInteger(version) || version < 0) {
     throw new CmsValidationError(
@@ -41,6 +47,12 @@ export async function readLayoutVersion(graph) {
  * @returns {Promise<void>}
  */
 export async function writeLayoutVersion(graph, version) {
+  if (!Number.isInteger(version) || version < 0) {
+    throw new CmsValidationError(
+      `Cannot write invalid layout version: ${version}`,
+      { code: 'layout_version_invalid', field: LAYOUT_VERSION_KEY }
+    );
+  }
   await graph.configSet(LAYOUT_VERSION_KEY, String(version));
 }
 
@@ -50,9 +62,9 @@ export async function writeLayoutVersion(graph, version) {
  *
  * @type {Array<[number, (ctx: {graph: any, refPrefix: string}) => Promise<void>]>}
  */
-const MIGRATIONS = [
-  [1, async (_ctx) => { /* v0→v1: no-op — stamps the version */ }],
-];
+const MIGRATIONS = Object.freeze([
+  Object.freeze([1, async (_ctx) => { /* v0→v1: no-op — stamps the version */ }]),
+]);
 
 /**
  * Returns the subset of migrations that need to run given the current version.
