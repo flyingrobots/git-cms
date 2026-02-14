@@ -326,6 +326,19 @@ describe('Server API (Integration)', () => {
     expect(data.error).toMatch(/sha/);
   });
 
+  it('500 responses return generic message without internal details', async () => {
+    // GET /api/cms/show with a non-existent slug throws a plain Error (not
+    // CmsValidationError), which routes through sendError as a 500.
+    const res = await fetch(`${baseUrl}/api/cms/show?slug=does-not-exist`);
+    const data = await res.json();
+    expect(res.status).toBe(500);
+    expect(data.error).toBe('Internal server error');
+    // Must NOT contain filesystem paths or internal details
+    expect(data.error).not.toMatch(/\//);
+    expect(data.error).not.toMatch(/node_modules/);
+    expect(data.error).not.toMatch(/\.js/);
+  });
+
   it('returns 400 with invalid_state_transition for bad transitions', async () => {
     // Create a draft, then try to unpublish it (invalid: draft → unpublished)
     const setupRes = await fetch(`${baseUrl}/api/cms/snapshot`, {
