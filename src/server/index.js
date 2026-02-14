@@ -84,7 +84,7 @@ function sendError(res, err) {
       field: err.field,
     });
   }
-  return send(res, 500, { error: err.message });
+  return send(res, 500, { error: 'Internal server error' });
 }
 
 const MAX_BODY_BYTES = 1_048_576; // 1 MB
