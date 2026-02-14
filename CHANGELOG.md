@@ -63,5 +63,9 @@ All notable changes to git-cms are documented in this file.
 - DI-mode `_updateRef` now performs manual CAS check against `oldSha`
 - Server tests assert setup call status codes to surface silent failures
 - Vitest exclude glob `test/git-e2e*` → `test/git-e2e**` to cover future subdirectories
+- Admin UI: reset history panel state (versions list, preview, selection) when creating a new article to prevent stale data
+- Defensive `|| {}` guard on `decoded.trailers` destructuring in `unpublishArticle` and `revertArticle` (prevents TypeError if trailers is undefined)
+- `readVersion` now returns `trailers: decoded.trailers || {}` ensuring callers always receive an object
+- Upload handler: moved tmpDir cleanup to `finally` block preventing temp directory leaks on failure
 
 [Unreleased]: https://github.com/flyingrobots/git-cms/compare/main...git-stunts
