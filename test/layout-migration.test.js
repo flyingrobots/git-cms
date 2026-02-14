@@ -97,6 +97,14 @@ describe('writeLayoutVersion', () => {
       code: 'layout_version_invalid',
     });
   });
+
+  it('rejects Infinity', async () => {
+    const graph = new InMemoryGraphAdapter();
+    await expect(writeLayoutVersion(graph, Infinity)).rejects.toMatchObject({
+      name: 'CmsValidationError',
+      code: 'layout_version_invalid',
+    });
+  });
 });
 
 describe('pendingMigrations', () => {

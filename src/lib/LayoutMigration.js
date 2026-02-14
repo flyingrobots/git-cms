@@ -78,6 +78,7 @@ export function pendingMigrations(currentVersion) {
 
 /**
  * Runs all pending migrations in order.
+ * Not concurrency-safe — caller must ensure exclusive access.
  *
  * @param {{ graph: any, refPrefix: string }} ctx
  * @returns {Promise<{ from: number, to: number, applied: number[] }>}
