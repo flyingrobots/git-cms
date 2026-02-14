@@ -214,6 +214,99 @@ describe('Server API (Integration)', () => {
     expect(data.sha).toBeDefined();
   });
 
+  it('GET /history returns version list', async () => {
+    // Create two versions
+    const snap1 = await fetch(`${baseUrl}/api/cms/snapshot`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slug: 'srv-hist', title: 'v1', body: 'b1' }),
+    });
+    expect(snap1.status).toBe(200);
+    const snap2 = await fetch(`${baseUrl}/api/cms/snapshot`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slug: 'srv-hist', title: 'v2', body: 'b2' }),
+    });
+    expect(snap2.status).toBe(200);
+
+    const res = await fetch(`${baseUrl}/api/cms/history?slug=srv-hist`);
+    const data = await res.json();
+    expect(res.status).toBe(200);
+    expect(Array.isArray(data)).toBe(true);
+    expect(data.length).toBe(2);
+    expect(data[0].title).toBe('v2');
+    expect(data[1].title).toBe('v1');
+  });
+
+  it('GET /history returns 400 without slug', async () => {
+    const res = await fetch(`${baseUrl}/api/cms/history`);
+    const data = await res.json();
+    expect(res.status).toBe(400);
+    expect(data.error).toBeDefined();
+  });
+
+  it('GET /show-version returns content for specific SHA', async () => {
+    const snap1 = await fetch(`${baseUrl}/api/cms/snapshot`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slug: 'srv-showver', title: 'First', body: 'first body' }),
+    });
+    const v1 = await snap1.json();
+    expect(snap1.status).toBe(200);
+    await fetch(`${baseUrl}/api/cms/snapshot`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slug: 'srv-showver', title: 'Second', body: 'second body' }),
+    });
+
+    const res = await fetch(`${baseUrl}/api/cms/show-version?slug=srv-showver&sha=${v1.sha}`);
+    const data = await res.json();
+    expect(res.status).toBe(200);
+    expect(data.title).toBe('First');
+    expect(data.body).toContain('first body');
+  });
+
+  it('POST /restore restores a version', async () => {
+    const snap1 = await fetch(`${baseUrl}/api/cms/snapshot`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slug: 'srv-restore', title: 'Original', body: 'original body' }),
+    });
+    const v1 = await snap1.json();
+    expect(snap1.status).toBe(200);
+    const snap2 = await fetch(`${baseUrl}/api/cms/snapshot`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slug: 'srv-restore', title: 'Edited', body: 'edited body' }),
+    });
+    expect(snap2.status).toBe(200);
+
+    const res = await fetch(`${baseUrl}/api/cms/restore`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slug: 'srv-restore', sha: v1.sha }),
+    });
+    const data = await res.json();
+    expect(res.status).toBe(200);
+    expect(data.sha).toBeDefined();
+
+    // Verify content was restored
+    const show = await fetch(`${baseUrl}/api/cms/show?slug=srv-restore`);
+    const article = await show.json();
+    expect(article.title).toBe('Original');
+  });
+
+  it('POST /restore returns 400 without required fields', async () => {
+    const res = await fetch(`${baseUrl}/api/cms/restore`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slug: 'test' }),
+    });
+    const data = await res.json();
+    expect(res.status).toBe(400);
+    expect(data.error).toBeDefined();
+  });
+
   it('returns 400 with invalid_state_transition for bad transitions', async () => {
     // Create a draft, then try to unpublish it (invalid: draft → unpublished)
     const setupRes = await fetch(`${baseUrl}/api/cms/snapshot`, {

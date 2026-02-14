@@ -6,6 +6,13 @@ All notable changes to git-cms are documented in this file.
 
 ### Added
 
+- **Version History Browser (CE3):** Browse prior versions of an article, preview old content, and restore a selected version as a new draft commit
+  - `CmsService.getArticleHistory()` — walk parent chain to list version summaries (SHA, title, status, author, date)
+  - `CmsService.readVersion()` — read full content of a specific commit by SHA
+  - `CmsService.restoreVersion()` — restore historical content as a new draft with ancestry validation and provenance trailers (`restoredFromSha`, `restoredAt`)
+  - `GET /api/cms/history`, `GET /api/cms/show-version`, `POST /api/cms/restore` server endpoints
+  - Admin UI: collapsible history panel with lazy-fetch, version preview, and restore button
+
 - **Content Identity Policy (M1.1):** Canonical slug validation with NFKC normalization, reserved word rejection, and `CmsValidationError` contract (`ContentIdentityPolicy.js`)
 - **State Machine (M1.2):** Explicit draft/published/unpublished/reverted states with enforced transition rules (`ContentStatePolicy.js`)
 - **Admin UI overhaul:** Split/edit/preview markdown editor (via `marked`), autosave, toast notifications, skeleton loading, drag-and-drop file uploads, metadata trailer editor, keyboard shortcuts (`Cmd+S`, `Esc`), dark mode token system

@@ -201,6 +201,48 @@ async function handler(req, res) {
         return;
       }
 
+      // GET /api/cms/history?slug=xxx&limit=50
+      if (req.method === 'GET' && pathname === '/api/cms/history') {
+        const { slug: rawSlug, limit: rawLimit } = query;
+        if (!rawSlug) return send(res, 400, { error: 'slug required' });
+        const slug = canonicalizeSlug(rawSlug);
+        const limit = Math.max(1, Math.min(200, parseInt(rawLimit, 10) || 50));
+        return send(res, 200, await cms.getArticleHistory({ slug, limit }));
+      }
+
+      // GET /api/cms/show-version?slug=xxx&sha=yyy
+      if (req.method === 'GET' && pathname === '/api/cms/show-version') {
+        const { slug: rawSlug, sha } = query;
+        if (!rawSlug || !sha) return send(res, 400, { error: 'slug and sha required' });
+        const slug = canonicalizeSlug(rawSlug);
+        const result = await cms.readVersion({ slug, sha });
+        // Cap response body at 1MB
+        if (result.body && Buffer.byteLength(result.body, 'utf8') > 1_048_576) {
+          result.body = result.body.slice(0, 1_048_576);
+          result.trailers = { ...result.trailers, truncated: 'true' };
+        }
+        return send(res, 200, result);
+      }
+
+      // POST /api/cms/restore
+      if (req.method === 'POST' && pathname === '/api/cms/restore') {
+        let body = '';
+        req.on('data', (c) => (body += c));
+        req.on('end', async () => {
+          try {
+            const { slug: rawSlug, sha } = JSON.parse(body || '{}');
+            if (!rawSlug || !sha) return send(res, 400, { error: 'slug and sha required' });
+            const slug = canonicalizeSlug(rawSlug);
+            const result = await cms.restoreVersion({ slug, sha });
+            return send(res, 200, result);
+          } catch (err) {
+            logError(err);
+            return sendError(res, err);
+          }
+        });
+        return;
+      }
+
       // POST /api/cms/upload
       if (req.method === 'POST' && pathname === '/api/cms/upload') {
         let body = '';

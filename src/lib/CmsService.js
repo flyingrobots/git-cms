@@ -318,6 +318,131 @@ export default class CmsService {
   }
 
   /**
+   * Returns version history for an article by walking the parent chain.
+   * @param {{ slug: string, limit?: number }} options
+   * @returns {Promise<Array<{ sha: string, title: string, status: string, author: string, date: string }>>}
+   */
+  async getArticleHistory({ slug, limit = 50 }) {
+    const canonicalSlug = canonicalizeSlug(slug);
+    const draftRef = this._refFor(canonicalSlug, 'articles');
+    const sha = await this.graph.readRef(draftRef);
+
+    if (!sha) {
+      throw new CmsValidationError(
+        `Article not found: "${canonicalSlug}"`,
+        { code: 'article_not_found', field: 'slug' }
+      );
+    }
+
+    const versions = [];
+    let current = sha;
+
+    while (current && versions.length < limit) {
+      const info = await this.graph.getNodeInfo(current);
+      const message = await this.graph.showNode(current);
+      const decoded = this.codec.decode(message);
+
+      versions.push({
+        sha: current,
+        title: decoded.title,
+        status: decoded.trailers?.status || 'draft',
+        author: info.author,
+        date: info.date,
+      });
+
+      current = info.parents?.[0] || null;
+    }
+
+    return versions;
+  }
+
+  /**
+   * Reads full content of a specific commit by SHA.
+   * @param {{ slug: string, sha: string }} options
+   * @returns {Promise<{ sha: string, title: string, body: string, trailers: object }>}
+   */
+  async readVersion({ slug, sha }) {
+    const canonicalSlug = canonicalizeSlug(slug);
+    const draftRef = this._refFor(canonicalSlug, 'articles');
+    const draftSha = await this.graph.readRef(draftRef);
+
+    if (!draftSha) {
+      throw new CmsValidationError(
+        `Article not found: "${canonicalSlug}"`,
+        { code: 'article_not_found', field: 'slug' }
+      );
+    }
+
+    const message = await this.graph.showNode(sha);
+    const decoded = this.codec.decode(message);
+    return { sha, title: decoded.title, body: decoded.body, trailers: decoded.trailers };
+  }
+
+  /**
+   * Restores content from a historical SHA as a new draft commit.
+   * @param {{ slug: string, sha: string }} options
+   * @returns {Promise<{ ref: string, sha: string, prev: string }>}
+   */
+  async restoreVersion({ slug, sha }) {
+    const canonicalSlug = canonicalizeSlug(slug);
+    const draftRef = this._refFor(canonicalSlug, 'articles');
+
+    const { effectiveState, draftSha } = await this._resolveArticleState(canonicalSlug);
+    validateTransition(effectiveState, STATES.DRAFT);
+
+    if (!draftSha) {
+      throw new CmsValidationError(
+        `Cannot restore "${canonicalSlug}": no draft ref exists`,
+        { code: 'no_draft', field: 'slug' }
+      );
+    }
+
+    // Ancestry validation: walk parent chain to verify target SHA belongs to this article
+    let found = false;
+    let walk = draftSha;
+    let steps = 0;
+    const walkLimit = 200;
+    while (walk && steps < walkLimit) {
+      if (walk === sha) { found = true; break; }
+      const info = await this.graph.getNodeInfo(walk);
+      walk = info.parents?.[0] || null;
+      steps++;
+    }
+    if (!found) {
+      throw new CmsValidationError(
+        `SHA "${sha}" is not in the history of article "${canonicalSlug}"`,
+        { code: 'invalid_version_for_article', field: 'sha' }
+      );
+    }
+
+    // Read target SHA content
+    const targetMessage = await this.graph.showNode(sha);
+    const decoded = this.codec.decode(targetMessage);
+    const { updatedat: _, restoredfromsha: _r, restoredat: _ra, ...restTrailers } = decoded.trailers;
+
+    const newMessage = this.codec.encode({
+      title: decoded.title,
+      body: decoded.body,
+      trailers: {
+        ...restTrailers,
+        status: STATES.DRAFT,
+        updatedAt: new Date().toISOString(),
+        restoredFromSha: sha,
+        restoredAt: new Date().toISOString(),
+      },
+    });
+
+    const newSha = await this.graph.commitNode({
+      message: newMessage,
+      parents: [draftSha],
+      sign: process.env.CMS_SIGN === '1',
+    });
+
+    await this._updateRef({ ref: draftRef, newSha, oldSha: draftSha });
+    return { ref: draftRef, sha: newSha, prev: draftSha };
+  }
+
+  /**
    * Uploads an asset and returns its manifest and CAS info.
    */
   async uploadAsset({ slug, filePath, filename }) {
