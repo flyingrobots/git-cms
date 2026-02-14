@@ -251,8 +251,8 @@ describe('Server API (Integration)', () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ slug: 'srv-showver', title: 'First', body: 'first body' }),
     });
-    const v1 = await snap1.json();
     expect(snap1.status).toBe(200);
+    const v1 = await snap1.json();
     const snap2 = await fetch(`${baseUrl}/api/cms/snapshot`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -261,8 +261,8 @@ describe('Server API (Integration)', () => {
     expect(snap2.status).toBe(200);
 
     const res = await fetch(`${baseUrl}/api/cms/show-version?slug=srv-showver&sha=${v1.sha}`);
-    const data = await res.json();
     expect(res.status).toBe(200);
+    const data = await res.json();
     expect(data.title).toBe('First');
     expect(data.body).toContain('first body');
   });
@@ -273,8 +273,8 @@ describe('Server API (Integration)', () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ slug: 'srv-restore', title: 'Original', body: 'original body' }),
     });
-    const v1 = await snap1.json();
     expect(snap1.status).toBe(200);
+    const v1 = await snap1.json();
     const snap2 = await fetch(`${baseUrl}/api/cms/snapshot`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -287,8 +287,8 @@ describe('Server API (Integration)', () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ slug: 'srv-restore', sha: v1.sha }),
     });
-    const data = await res.json();
     expect(res.status).toBe(200);
+    const data = await res.json();
     expect(data.sha).toBeDefined();
 
     // Verify content was restored
