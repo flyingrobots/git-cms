@@ -10,6 +10,6 @@ export default defineConfig({
     },
   },
   test: {
-    exclude: [...defaultExclude, 'test/e2e/**', 'test/git-e2e*'],
+    exclude: [...defaultExclude, 'test/e2e/**', 'test/git-e2e**'],
   },
 });

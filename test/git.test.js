@@ -226,6 +226,39 @@ describe('State Machine', () => {
     });
   });
 
+  it('cannot unpublish a reverted article', async () => {
+    await cms.saveSnapshot({ slug: 'sm-rev-unpub', title: 'v1', body: 'b1' });
+    await cms.saveSnapshot({ slug: 'sm-rev-unpub', title: 'v2', body: 'b2' });
+    await cms.revertArticle({ slug: 'sm-rev-unpub' });
+
+    await expect(cms.unpublishArticle({ slug: 'sm-rev-unpub' })).rejects.toMatchObject({
+      name: 'CmsValidationError',
+      code: 'invalid_state_transition',
+    });
+  });
+
+  it('cannot revert a reverted article (double revert)', async () => {
+    await cms.saveSnapshot({ slug: 'sm-dbl-rev', title: 'v1', body: 'b1' });
+    await cms.saveSnapshot({ slug: 'sm-dbl-rev', title: 'v2', body: 'b2' });
+    await cms.revertArticle({ slug: 'sm-dbl-rev' });
+
+    await expect(cms.revertArticle({ slug: 'sm-dbl-rev' })).rejects.toMatchObject({
+      name: 'CmsValidationError',
+      code: 'invalid_state_transition',
+    });
+  });
+
+  it('cannot revert an unpublished article', async () => {
+    await cms.saveSnapshot({ slug: 'sm-unpub-rev', title: 'v1', body: 'b1' });
+    await cms.publishArticle({ slug: 'sm-unpub-rev' });
+    await cms.unpublishArticle({ slug: 'sm-unpub-rev' });
+
+    await expect(cms.revertArticle({ slug: 'sm-unpub-rev' })).rejects.toMatchObject({
+      name: 'CmsValidationError',
+      code: 'invalid_state_transition',
+    });
+  });
+
   it('publish is idempotent (same SHA)', async () => {
     await cms.saveSnapshot({ slug: 'sm-idem', title: 'T', body: 'B' });
     const first = await cms.publishArticle({ slug: 'sm-idem' });

@@ -67,6 +67,15 @@ export default class CmsService {
     if (this.repo) {
       await this.repo.updateRef({ ref, newSha, oldSha });
     } else {
+      // DI mode — manual CAS: verify current value matches expected oldSha
+      if (oldSha) {
+        const current = await this.graph.readRef(ref);
+        if (current !== oldSha) {
+          throw new Error(
+            `CAS conflict on ${ref}: expected ${oldSha}, found ${current}`
+          );
+        }
+      }
       await this.graph.updateRef(ref, newSha);
     }
   }

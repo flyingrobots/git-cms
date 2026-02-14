@@ -5,6 +5,7 @@ All notable changes to git-cms are documented in this file.
 ## [Unreleased] — git-stunts branch
 
 ### Added
+
 - **Content Identity Policy (M1.1):** Canonical slug validation with NFKC normalization, reserved word rejection, and `CmsValidationError` contract (`ContentIdentityPolicy.js`)
 - **State Machine (M1.2):** Explicit draft/published/unpublished/reverted states with enforced transition rules (`ContentStatePolicy.js`)
 - **Admin UI overhaul:** Split/edit/preview markdown editor (via `marked`), autosave, toast notifications, skeleton loading, drag-and-drop file uploads, metadata trailer editor, keyboard shortcuts (`Cmd+S`, `Esc`), dark mode token system
@@ -20,6 +21,7 @@ All notable changes to git-cms are documented in this file.
 - **Dependency integrity check:** `check-dependency-integrity.mjs` prevents `file:` path regressions
 
 ### Changed
+
 - CmsService now uses `@git-stunts/git-warp` `GitGraphAdapter` and `@git-stunts/plumbing` `GitRepositoryService` instead of raw plumbing calls
 - All `repo.updateRef()` calls routed through `CmsService._updateRef()` for DI/production dual-path
 - `listArticles()` supports both plumbing (`for-each-ref`) and in-memory (`graph.listRefs`) paths
@@ -27,6 +29,7 @@ All notable changes to git-cms are documented in this file.
 - Swapped all `file:` dependency paths to versioned npm ranges (PP3)
 
 ### Fixed
+
 - Symlink traversal hardening in static file serving
 - Slug canonicalization enforced at all API ingress points
 - Admin UI API calls aligned with server contract (query params, response shapes)
@@ -43,3 +46,9 @@ All notable changes to git-cms are documented in this file.
 - Replaced sequential `readRef` loop with `Promise.all` in `listArticles` DI path
 - Admin UI: fixed `removeTrailerRow` redundant positional removal, FileReader error handling, autosave-while-saving guard, Escape key scoped to editor panel, drag-and-drop scoped to drop zone
 - Test cleanup: extracted `createTestCms()` helper, converted try/catch assertions to `.rejects.toMatchObject()`, added guard-path tests
+- `TRANSITIONS` Sets now `Object.freeze`d to prevent mutation via `.add()`/`.delete()`
+- DI-mode `_updateRef` now performs manual CAS check against `oldSha`
+- Server tests assert setup call status codes to surface silent failures
+- Vitest exclude glob `test/git-e2e*` → `test/git-e2e**` to cover future subdirectories
+
+[Unreleased]: https://github.com/flyingrobots/git-cms/compare/main...git-stunts

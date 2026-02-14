@@ -26,10 +26,10 @@ export const STATES = Object.freeze({
  * Allowed transitions: from → Set of valid targets.
  */
 export const TRANSITIONS = Object.freeze({
-  [STATES.DRAFT]:       new Set([STATES.DRAFT, STATES.PUBLISHED, STATES.REVERTED]),
-  [STATES.PUBLISHED]:   new Set([STATES.UNPUBLISHED, STATES.PUBLISHED]),
-  [STATES.UNPUBLISHED]: new Set([STATES.DRAFT, STATES.PUBLISHED]),
-  [STATES.REVERTED]:    new Set([STATES.DRAFT]),
+  [STATES.DRAFT]:       Object.freeze(new Set([STATES.DRAFT, STATES.PUBLISHED, STATES.REVERTED])),
+  [STATES.PUBLISHED]:   Object.freeze(new Set([STATES.UNPUBLISHED, STATES.PUBLISHED])),
+  [STATES.UNPUBLISHED]: Object.freeze(new Set([STATES.DRAFT, STATES.PUBLISHED])),
+  [STATES.REVERTED]:    Object.freeze(new Set([STATES.DRAFT])),
 });
 
 /**
