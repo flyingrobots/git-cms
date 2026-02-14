@@ -46,7 +46,10 @@ describe('CmsService (E2E — real git)', () => {
       throw new Error('fatal: permission denied');
     };
 
-    await expect(cms.listArticles()).rejects.toThrow('fatal: permission denied');
-    cms.plumbing.execute = originalExecute;
+    try {
+      await expect(cms.listArticles()).rejects.toThrow('fatal: permission denied');
+    } finally {
+      cms.plumbing.execute = originalExecute;
+    }
   });
 });

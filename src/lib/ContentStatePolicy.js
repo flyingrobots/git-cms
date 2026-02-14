@@ -43,7 +43,11 @@ export function resolveEffectiveState({ draftStatus, pubSha }) {
   if (pubSha) return STATES.PUBLISHED;
   if (draftStatus === STATES.UNPUBLISHED) return STATES.UNPUBLISHED;
   if (draftStatus === STATES.REVERTED) return STATES.REVERTED;
-  return STATES.DRAFT;
+  if (draftStatus === STATES.DRAFT) return STATES.DRAFT;
+  throw new CmsValidationError(
+    `Unrecognized draft status: "${draftStatus}"`,
+    { code: 'unknown_status', field: 'status' }
+  );
 }
 
 /**

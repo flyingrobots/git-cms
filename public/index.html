@@ -4,7 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Git CMS Admin</title>
-  <script src="https://cdn.jsdelivr.net/npm/marked@15/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked@15/marked.min.js"
+          integrity="sha384-948ahk4ZmxYVYOc+rxN1H2gM1EJ2Duhp7uHtZ4WSLkV4Vtx5MUqnV+l7u9B+jFv+"
+          crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.4/dist/purify.min.js"
+          integrity="sha384-eEu5CTj3qGvu9PdJuS+YlkNi7d2XxQROAFYOr59zgObtlcux1ae1Il3u7jvdCSWu"
+          crossorigin="anonymous"></script>
   <style>
     @import "https://unpkg.com/open-props";
     @import "https://unpkg.com/open-props/normalize.min.css";
@@ -549,7 +554,7 @@
       clearTimeout(previewTimer);
       previewTimer = setTimeout(() => {
         const body = document.getElementById('bodyInput').value;
-        document.getElementById('previewPane').innerHTML = marked.parse(body || '');
+        document.getElementById('previewPane').innerHTML = DOMPurify.sanitize(marked.parse(body || ''));
       }, 150);
     }
 
@@ -591,7 +596,10 @@
             const li = document.createElement('li');
             li.className = 'article-item';
             if (item.slug === state.currentSlug) li.classList.add('active');
-            li.innerHTML = `<span class="slug">${item.slug}</span>`;
+            const slugSpan = document.createElement('span');
+            slugSpan.className = 'slug';
+            slugSpan.textContent = item.slug;
+            li.appendChild(slugSpan);
             li.onclick = () => this.loadArticle(item.slug);
             ul.appendChild(li);
           });
@@ -747,18 +755,23 @@
       /* Metadata Badges */
       renderBadges() {
         const row = document.getElementById('badgeRow');
+        row.innerHTML = '';
         const t = state.trailers;
-        let html = '';
         const statusVal = (t.Status || t.status || '').toLowerCase();
         if (statusVal) {
           const cls = statusVal === 'published' ? 'badge-published' : 'badge-draft';
-          html += `<span class="badge ${cls}">${statusVal}</span>`;
+          const span = document.createElement('span');
+          span.className = `badge ${cls}`;
+          span.textContent = statusVal;
+          row.appendChild(span);
         }
         const updated = t['Updated-at'] || t['updated-at'] || t.updatedAt || '';
         if (updated) {
-          html += `<span class="badge badge-info">Updated: ${relTime(updated) || updated}</span>`;
+          const span = document.createElement('span');
+          span.className = 'badge badge-info';
+          span.textContent = `Updated: ${relTime(updated) || updated}`;
+          row.appendChild(span);
         }
-        row.innerHTML = html;
       },
 
       /* Trailers Grid */
@@ -790,7 +803,6 @@
       removeTrailerRow(idx) {
         const grid = document.getElementById('trailerGrid');
         grid.querySelectorAll(`[data-idx="${idx}"]`).forEach(el => el.remove());
-        grid.querySelectorAll('.remove-btn')[idx]?.remove();
         // re-collect to simplify
         state.trailers = this.collectTrailers();
         this.renderTrailers();
@@ -820,8 +832,13 @@
 
         toast(`Uploading ${file.name}...`, 'info');
         const reader = new FileReader();
+        reader.onerror = () => {
+          toast('Failed to read file: ' + file.name, 'error');
+        };
         reader.onload = async (e) => {
-          const b64 = e.target.result.split(',')[1];
+          const parts = e.target.result.split(',');
+          const b64 = parts[1];
+          if (!b64) { toast('Failed to encode file', 'error'); return; }
           try {
             const data = await api.upload({ slug, filename: file.name, data: b64 });
             const textarea = document.getElementById('bodyInput');
@@ -859,9 +876,9 @@
         if (!state.dirty) {
           state.dirty = true;
         }
-        // Autosave for existing articles
+        // Autosave for existing articles (skip if already saving)
         this.clearAutosave();
-        if (state.currentSlug) {
+        if (state.currentSlug && !state.saving) {
           state.autosaveTimer = setTimeout(() => this.save(), 3000);
         }
       },
@@ -908,7 +925,7 @@
           UI.save();
         }
       }
-      if (e.key === 'Escape') {
+      if (e.key === 'Escape' && document.getElementById('editorPanel').contains(document.activeElement)) {
         UI.deselect();
       }
     });
@@ -921,19 +938,22 @@
       }
     });
 
-    // Drag and drop
+    // Drag and drop — scoped to dropZone, with document-level default prevention
     const dropZone = document.getElementById('dropZone');
-    document.addEventListener('dragover', (e) => {
+    document.addEventListener('dragover', (e) => e.preventDefault());
+    document.addEventListener('drop', (e) => e.preventDefault());
+    dropZone.addEventListener('dragover', (e) => {
       e.preventDefault();
       dropZone.classList.add('dragover');
     });
-    document.addEventListener('dragleave', (e) => {
-      if (!e.relatedTarget || !document.body.contains(e.relatedTarget)) {
+    dropZone.addEventListener('dragleave', (e) => {
+      if (!dropZone.contains(e.relatedTarget)) {
         dropZone.classList.remove('dragover');
       }
     });
-    document.addEventListener('drop', (e) => {
+    dropZone.addEventListener('drop', (e) => {
       e.preventDefault();
+      e.stopPropagation();
       dropZone.classList.remove('dragover');
       const files = e.dataTransfer?.files;
       if (files?.length) {

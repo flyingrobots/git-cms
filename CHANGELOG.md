@@ -31,3 +31,15 @@ All notable changes to git-cms are documented in this file.
 - Slug canonicalization enforced at all API ingress points
 - Admin UI API calls aligned with server contract (query params, response shapes)
 - Server integration test environment stabilized for CI
+- **(P1) Stored XSS via markdown preview:** Sanitize `marked.parse()` output with DOMPurify
+- **(P1) Unpublish atomicity:** Reorder `unpublishArticle` so draft ref updates before published ref deletion
+- **(P2) XSS via slug/badge rendering:** Use `textContent` and DOM APIs instead of `innerHTML` interpolation
+- **(P2) SRI hashes:** Add `integrity` + `crossorigin` to marked and DOMPurify CDN script tags
+- **(P2) Null guards:** `revertArticle` and `unpublishArticle` throw `no_draft` when draft ref is missing
+- **(P2) uploadAsset DI guard:** Throw `unsupported_in_di_mode` when `cas`/`vault` are null
+- **(P2) Monkey-patch safety:** E2E test restores `plumbing.execute` in `finally` block
+- Unknown `draftStatus` in `resolveEffectiveState` now throws `unknown_status` instead of silently falling through to draft
+- Removed double-canonicalization in `_resolveArticleState`
+- Replaced sequential `readRef` loop with `Promise.all` in `listArticles` DI path
+- Admin UI: fixed `removeTrailerRow` redundant positional removal, FileReader error handling, autosave-while-saving guard, Escape key scoped to editor panel, drag-and-drop scoped to drop zone
+- Test cleanup: extracted `createTestCms()` helper, converted try/catch assertions to `.rejects.toMatchObject()`, added guard-path tests

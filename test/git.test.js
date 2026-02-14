@@ -2,14 +2,18 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import InMemoryGraphAdapter from '#test/InMemoryGraphAdapter';
 import CmsService from '../src/lib/CmsService.js';
 import { CmsValidationError } from '../src/lib/ContentIdentityPolicy.js';
+import { resolveEffectiveState } from '../src/lib/ContentStatePolicy.js';
+
+function createTestCms() {
+  const graph = new InMemoryGraphAdapter();
+  return new CmsService({ refPrefix: 'refs/cms', graph });
+}
 
 describe('CmsService (Integration)', () => {
   let cms;
-  const refPrefix = 'refs/cms';
 
   beforeEach(() => {
-    const graph = new InMemoryGraphAdapter();
-    cms = new CmsService({ refPrefix, graph });
+    cms = createTestCms();
   });
 
   it('saves a snapshot and reads it back', async () => {
@@ -87,15 +91,19 @@ describe('CmsService (Integration)', () => {
       })
     ).rejects.toThrow(/must match canonical slug/);
   });
+
+  it('uploadAsset in DI mode throws unsupported_in_di_mode', async () => {
+    await expect(
+      cms.uploadAsset({ slug: 'test', filePath: '/tmp/f', filename: 'f.png' })
+    ).rejects.toMatchObject({ name: 'CmsValidationError', code: 'unsupported_in_di_mode' });
+  });
 });
 
 describe('State Machine', () => {
   let cms;
-  const refPrefix = 'refs/cms';
 
   beforeEach(() => {
-    const graph = new InMemoryGraphAdapter();
-    cms = new CmsService({ refPrefix, graph });
+    cms = createTestCms();
   });
 
   it('draft → draft (re-save) keeps status draft', async () => {
@@ -175,41 +183,36 @@ describe('State Machine', () => {
   it('revert with no parent throws revert_no_parent', async () => {
     await cms.saveSnapshot({ slug: 'sm-no-parent', title: 'First', body: 'only' });
 
-    await expect(cms.revertArticle({ slug: 'sm-no-parent' })).rejects.toThrow(
-      /no parent commit exists/
-    );
+    await expect(cms.revertArticle({ slug: 'sm-no-parent' })).rejects.toMatchObject({
+      name: 'CmsValidationError',
+      code: 'revert_no_parent',
+    });
+  });
 
-    try {
-      await cms.revertArticle({ slug: 'sm-no-parent' });
-    } catch (err) {
-      expect(err).toBeInstanceOf(CmsValidationError);
-      expect(err.code).toBe('revert_no_parent');
-    }
+  it('revert with nonexistent slug throws no_draft', async () => {
+    await expect(cms.revertArticle({ slug: 'no-such-slug' })).rejects.toMatchObject({
+      name: 'CmsValidationError',
+      code: 'no_draft',
+    });
   });
 
   it('cannot unpublish a draft', async () => {
     await cms.saveSnapshot({ slug: 'sm-bad-unpub', title: 'T', body: 'B' });
 
-    try {
-      await cms.unpublishArticle({ slug: 'sm-bad-unpub' });
-      expect.fail('should have thrown');
-    } catch (err) {
-      expect(err).toBeInstanceOf(CmsValidationError);
-      expect(err.code).toBe('invalid_state_transition');
-    }
+    await expect(cms.unpublishArticle({ slug: 'sm-bad-unpub' })).rejects.toMatchObject({
+      name: 'CmsValidationError',
+      code: 'invalid_state_transition',
+    });
   });
 
   it('cannot revert a published article', async () => {
     await cms.saveSnapshot({ slug: 'sm-bad-rev', title: 'T', body: 'B' });
     await cms.publishArticle({ slug: 'sm-bad-rev' });
 
-    try {
-      await cms.revertArticle({ slug: 'sm-bad-rev' });
-      expect.fail('should have thrown');
-    } catch (err) {
-      expect(err).toBeInstanceOf(CmsValidationError);
-      expect(err.code).toBe('invalid_state_transition');
-    }
+    await expect(cms.revertArticle({ slug: 'sm-bad-rev' })).rejects.toMatchObject({
+      name: 'CmsValidationError',
+      code: 'invalid_state_transition',
+    });
   });
 
   it('cannot publish a reverted article', async () => {
@@ -217,13 +220,10 @@ describe('State Machine', () => {
     await cms.saveSnapshot({ slug: 'sm-bad-pub-rev', title: 'v2', body: 'b2' });
     await cms.revertArticle({ slug: 'sm-bad-pub-rev' });
 
-    try {
-      await cms.publishArticle({ slug: 'sm-bad-pub-rev' });
-      expect.fail('should have thrown');
-    } catch (err) {
-      expect(err).toBeInstanceOf(CmsValidationError);
-      expect(err.code).toBe('invalid_state_transition');
-    }
+    await expect(cms.publishArticle({ slug: 'sm-bad-pub-rev' })).rejects.toMatchObject({
+      name: 'CmsValidationError',
+      code: 'invalid_state_transition',
+    });
   });
 
   it('publish is idempotent (same SHA)', async () => {
@@ -233,5 +233,11 @@ describe('State Machine', () => {
 
     expect(second.sha).toBe(first.sha);
     expect(second.prev).toBe(first.sha);
+  });
+
+  it('resolveEffectiveState throws on unknown status', () => {
+    expect(() => resolveEffectiveState({ draftStatus: 'bogus', pubSha: null })).toThrow(
+      /Unrecognized draft status/
+    );
   });
 });

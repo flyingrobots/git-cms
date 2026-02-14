@@ -87,9 +87,8 @@ export default class CmsService {
    * @returns {{ effectiveState: string, draftSha: string|null, pubSha: string|null, draftStatus: string }}
    */
   async _resolveArticleState(slug) {
-    const canonicalSlug = canonicalizeSlug(slug);
-    const draftRef = this._refFor(canonicalSlug, 'articles');
-    const pubRef = this._refFor(canonicalSlug, 'published');
+    const draftRef = this._refFor(slug, 'articles');
+    const pubRef = this._refFor(slug, 'published');
 
     const draftSha = await this.graph.readRef(draftRef);
     const pubSha = await this.graph.readRef(pubRef);
@@ -138,13 +137,11 @@ export default class CmsService {
 
     // DI mode — use graph.listRefs + readRef
     const refs = await this.graph.listRefs(ns);
-    const results = [];
-    for (const ref of refs) {
+    return Promise.all(refs.map(async (ref) => {
       const sha = await this.graph.readRef(ref);
       const slug = ref.replace(ns, '');
-      results.push({ ref, sha, slug });
-    }
-    return results;
+      return { ref, sha, slug };
+    }));
   }
 
   /**
@@ -227,8 +224,12 @@ export default class CmsService {
     const { effectiveState, draftSha } = await this._resolveArticleState(canonicalSlug);
     validateTransition(effectiveState, STATES.UNPUBLISHED);
 
-    // Delete the published ref
-    await this.graph.deleteRef(pubRef);
+    if (!draftSha) {
+      throw new CmsValidationError(
+        `Cannot unpublish "${canonicalSlug}": no draft ref exists`,
+        { code: 'no_draft', field: 'slug' }
+      );
+    }
 
     // Read current draft content and re-commit with status: unpublished
     const message = await this.graph.showNode(draftSha);
@@ -245,7 +246,11 @@ export default class CmsService {
       sign: process.env.CMS_SIGN === '1',
     });
 
+    // Update draft ref FIRST, delete published ref LAST for atomicity.
+    // If deleteRef fails, the published ref survives (safe).
     await this._updateRef({ ref: draftRef, newSha, oldSha: draftSha });
+    await this.graph.deleteRef(pubRef);
+
     return { ref: draftRef, sha: newSha, prev: draftSha };
   }
 
@@ -258,6 +263,13 @@ export default class CmsService {
 
     const { effectiveState, draftSha } = await this._resolveArticleState(canonicalSlug);
     validateTransition(effectiveState, STATES.REVERTED);
+
+    if (!draftSha) {
+      throw new CmsValidationError(
+        `Cannot revert "${canonicalSlug}": no draft ref exists`,
+        { code: 'no_draft', field: 'slug' }
+      );
+    }
 
     const info = await this.graph.getNodeInfo(draftSha);
     if (!info.parents || info.parents.length === 0 || !info.parents[0]) {
@@ -291,6 +303,12 @@ export default class CmsService {
    * Uploads an asset and returns its manifest and CAS info.
    */
   async uploadAsset({ slug, filePath, filename }) {
+    if (!this.cas || !this.vault) {
+      throw new CmsValidationError(
+        'uploadAsset is not supported in DI mode',
+        { code: 'unsupported_in_di_mode' }
+      );
+    }
     const canonicalSlug = canonicalizeSlug(slug);
     const ENV = (process.env.GIT_CMS_ENV || 'dev').toLowerCase();
     const encryptionKeyRaw = await this.vault.resolveSecret({
