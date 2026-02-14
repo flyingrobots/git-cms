@@ -67,5 +67,10 @@ All notable changes to git-cms are documented in this file.
 - Defensive `|| {}` guard on `decoded.trailers` destructuring in `unpublishArticle` and `revertArticle` (prevents TypeError if trailers is undefined)
 - `readVersion` now returns `trailers: decoded.trailers || {}` ensuring callers always receive an object
 - Upload handler: moved tmpDir cleanup to `finally` block preventing temp directory leaks on failure
+- **(P1) sendError info leak:** 500 responses now return generic 'Internal server error' instead of raw `err.message` (prevents leaking file paths, git subprocess details, or internal state)
+- **(P2) readBody O(n²):** `readBody` now accumulates chunks in an array and uses `Buffer.concat` instead of repeated string concatenation
+- Admin UI: `loadArticle` unconditionally resets `historyVersions` and `selectedVersion` to prevent stale history state when switching articles with the panel closed
+- Admin UI: `selectVersion` guards against out-of-order async responses (prevents stale preview flash from rapid clicks)
+- **(P2) walkLimit divergence:** Extracted `HISTORY_WALK_LIMIT` as a shared exported constant used by both `_validateAncestry` and the server's history limit clamp
 
 [Unreleased]: https://github.com/flyingrobots/git-cms/compare/main...git-stunts
