@@ -439,6 +439,8 @@ export default class CmsService {
     // Read target SHA content
     const targetMessage = await this.graph.showNode(sha);
     const decoded = this.codec.decode(targetMessage);
+    // trailer-codec normalizes keys to lowercase on decode; destructure the
+    // lowercase forms so the subsequent camelCase writes create fresh keys.
     const trailers = decoded.trailers || {};
     const { updatedat: _, restoredfromsha: _r, restoredat: _ra, ...restTrailers } = trailers;
 
