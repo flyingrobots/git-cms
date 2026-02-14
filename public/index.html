@@ -1059,10 +1059,12 @@
 
         try {
           const data = await api.showVersion(state.currentSlug, sha);
+          if (state.selectedVersion?.sha !== sha) return;
           contentEl.innerHTML = DOMPurify.sanitize(marked.parse(data.body || ''));
           // Disable restore for current version (idx 0)
           restoreBtn.disabled = idx === 0;
         } catch (err) {
+          if (state.selectedVersion?.sha !== sha) return;
           contentEl.textContent = 'Failed to load version content';
           restoreBtn.disabled = true;
         }
