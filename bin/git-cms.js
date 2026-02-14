@@ -2,6 +2,7 @@
 
 import CmsService from '../src/lib/CmsService.js';
 import { canonicalizeSlug } from '../src/lib/ContentIdentityPolicy.js';
+import { migrate, readLayoutVersion, CURRENT_LAYOUT_VERSION } from '../src/lib/LayoutMigration.js';
 
 const DEFAULT_REF_PREFIX = 'refs/_blog/dev';
 
@@ -82,8 +83,23 @@ async function main() {
         });
         break;
       }
+      case 'migrate': {
+        const result = await migrate({ graph: cms.graph, refPrefix });
+        if (result.applied.length === 0) {
+          console.log(`Already at layout version ${result.to}. Nothing to do.`);
+        } else {
+          console.log(`Migrated layout: v${result.from} → v${result.to} (applied: ${result.applied.join(', ')})`);
+        }
+        break;
+      }
+      case 'layout-version': {
+        const repoVersion = await readLayoutVersion(cms.graph);
+        console.log(`Repo:     v${repoVersion}`);
+        console.log(`Codebase: v${CURRENT_LAYOUT_VERSION}`);
+        break;
+      }
       default:
-        console.log('Usage: git cms <draft|publish|unpublish|revert|list|show|serve>');
+        console.log('Usage: git cms <draft|publish|unpublish|revert|list|show|serve|migrate|layout-version>');
         process.exit(1);
     }
   } catch (err) {

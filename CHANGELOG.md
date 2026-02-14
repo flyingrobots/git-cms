@@ -2,6 +2,14 @@
 
 All notable changes to git-cms are documented in this file.
 
+## [1.1.0] — Migration & Repo Layout Spec (M1.3)
+
+### Added
+
+- **Layout Specification v1** (`docs/LAYOUT_SPEC.md`): Formalizes ref namespace, state derivation rules, commit format, config keys, and migration policy
+- **Migration framework** (`src/lib/LayoutMigration.js`): `readLayoutVersion`, `writeLayoutVersion`, `pendingMigrations`, `migrate` — forward-only, idempotent layout migrations stored in `cms.layout.version` git config
+- **CLI commands:** `git-cms migrate` (run pending migrations) and `git-cms layout-version` (print repo + codebase versions)
+
 ## [Unreleased] — git-stunts branch
 
 ### Added
