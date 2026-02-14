@@ -352,6 +352,7 @@ export default class CmsService {
    * @returns {Promise<Array<{ sha: string, title: string, status: string, author: string, date: string }>>}
    */
   async getArticleHistory({ slug, limit = 50 }) {
+    const effectiveLimit = Math.max(1, Math.min(limit, HISTORY_WALK_LIMIT));
     const canonicalSlug = canonicalizeSlug(slug);
     const draftRef = this._refFor(canonicalSlug, 'articles');
     const pubRef = this._refFor(canonicalSlug, 'published');
@@ -367,7 +368,7 @@ export default class CmsService {
     const versions = [];
     let current = sha;
 
-    while (current && versions.length < limit) {
+    while (current && versions.length < effectiveLimit) {
       const [info, message] = await Promise.all([
         this.graph.getNodeInfo(current),
         this.graph.showNode(current),
