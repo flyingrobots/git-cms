@@ -92,7 +92,7 @@ const SHA_RE = /^[0-9a-f]{40}$/;
 
 function readBody(req, limit = MAX_BODY_BYTES) {
   return new Promise((resolve, reject) => {
-    let body = '';
+    const chunks = [];
     let bytes = 0;
     req.on('data', (chunk) => {
       bytes += chunk.length;
@@ -101,9 +101,9 @@ function readBody(req, limit = MAX_BODY_BYTES) {
         reject(new CmsValidationError('Request body too large', { code: 'body_too_large' }));
         return;
       }
-      body += chunk;
+      chunks.push(chunk);
     });
-    req.on('end', () => resolve(body));
+    req.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
     req.on('error', reject);
   });
 }
