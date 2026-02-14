@@ -719,6 +719,10 @@
           updatePreview();
           this.highlightActive(slug);
 
+          // Reset history state to prevent stale data from previous article
+          state.historyVersions = [];
+          state.selectedVersion = null;
+
           // Refresh history if panel is already open
           if (document.getElementById('historySection').open) {
             this.fetchHistory();
