@@ -212,7 +212,8 @@ async function handler(req, res) {
           const { slug: rawSlug, limit: rawLimit } = query;
           if (!rawSlug) return send(res, 400, { error: 'slug required' });
           const slug = canonicalizeSlug(rawSlug);
-          const limit = Math.max(1, Math.min(HISTORY_WALK_LIMIT, parseInt(rawLimit, 10) || 50));
+          const parsed = parseInt(rawLimit, 10);
+          const limit = Math.max(1, Math.min(HISTORY_WALK_LIMIT, Number.isNaN(parsed) ? 50 : parsed));
           return send(res, 200, await cms.getArticleHistory({ slug, limit }));
         } catch (err) {
           logError(err);
