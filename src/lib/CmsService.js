@@ -408,7 +408,7 @@ export default class CmsService {
 
     const message = await this.graph.showNode(sha);
     const decoded = this.codec.decode(message);
-    return { sha, title: decoded.title, body: decoded.body, trailers: decoded.trailers };
+    return { sha, title: decoded.title, body: decoded.body, trailers: decoded.trailers || {} };
   }
 
   /**
