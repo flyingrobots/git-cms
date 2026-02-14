@@ -163,6 +163,44 @@ async function handler(req, res) {
         return;
       }
 
+      // POST /api/cms/unpublish
+      if (req.method === 'POST' && pathname === '/api/cms/unpublish') {
+        let body = '';
+        req.on('data', (c) => (body += c));
+        req.on('end', async () => {
+          try {
+            const { slug: rawSlug } = JSON.parse(body || '{}');
+            if (!rawSlug) return send(res, 400, { error: 'slug required' });
+            const slug = canonicalizeSlug(rawSlug);
+            const result = await cms.unpublishArticle({ slug });
+            return send(res, 200, result);
+          } catch (err) {
+            logError(err);
+            return sendError(res, err);
+          }
+        });
+        return;
+      }
+
+      // POST /api/cms/revert
+      if (req.method === 'POST' && pathname === '/api/cms/revert') {
+        let body = '';
+        req.on('data', (c) => (body += c));
+        req.on('end', async () => {
+          try {
+            const { slug: rawSlug } = JSON.parse(body || '{}');
+            if (!rawSlug) return send(res, 400, { error: 'slug required' });
+            const slug = canonicalizeSlug(rawSlug);
+            const result = await cms.revertArticle({ slug });
+            return send(res, 200, result);
+          } catch (err) {
+            logError(err);
+            return sendError(res, err);
+          }
+        });
+        return;
+      }
+
       // POST /api/cms/upload
       if (req.method === 'POST' && pathname === '/api/cms/upload') {
         let body = '';

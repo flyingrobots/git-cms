@@ -16,7 +16,8 @@
     "test": "./test/run-docker.sh",
     "test:setup": "./test/run-setup-tests.sh",
     "test:local": "vitest run",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:git-e2e": "vitest run --config vitest.e2e.config.js test/git-e2e.test.js"
   },
   "author": "James Ross <james@flyingrobots.dev>",
   "license": "Apache-2.0",
@@ -28,7 +29,7 @@
     "@git-stunts/alfred": "^0.10.3",
     "@git-stunts/docker-guard": "^0.1.0",
     "@git-stunts/git-cas": "^3.0.0",
-    "@git-stunts/git-warp": "^10.4.2",
+    "@git-stunts/git-warp": "^10.8.0",
     "@git-stunts/plumbing": "^2.8.0",
     "@git-stunts/trailer-codec": "^2.1.1",
     "@git-stunts/vault": "^1.0.0"

@@ -24,10 +24,10 @@ npm run setup
 ### Try It Out
 
 ```bash
-# Option 1: See a demo (recommended first time)
+# Option 1: Guided walkthrough of key features
 npm run demo
 
-# Option 2: Interactive menu
+# Option 2: Interactive menu (start server, run tests, open shell)
 npm run quickstart
 
 # Option 3: Just start the server

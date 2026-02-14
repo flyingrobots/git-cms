@@ -39,6 +39,24 @@ async function main() {
         console.log(`Published: ${res.sha} (${res.ref})`);
         break;
       }
+      case 'unpublish': {
+        const [rawSlug] = args;
+        if (!rawSlug) throw new Error('Usage: git cms unpublish <slug>');
+        const slug = canonicalizeSlug(rawSlug);
+
+        const res = await cms.unpublishArticle({ slug });
+        console.log(`Unpublished: ${res.sha} (${res.ref})`);
+        break;
+      }
+      case 'revert': {
+        const [rawSlug] = args;
+        if (!rawSlug) throw new Error('Usage: git cms revert <slug>');
+        const slug = canonicalizeSlug(rawSlug);
+
+        const res = await cms.revertArticle({ slug });
+        console.log(`Reverted: ${res.sha} (${res.ref})`);
+        break;
+      }
       case 'list': {
         const items = await cms.listArticles();
         if (items.length === 0) console.log('No articles found');
@@ -65,7 +83,7 @@ async function main() {
         break;
       }
       default:
-        console.log('Usage: git cms <draft|publish|list|show|serve>');
+        console.log('Usage: git cms <draft|publish|unpublish|revert|list|show|serve>');
         process.exit(1);
     }
   } catch (err) {
