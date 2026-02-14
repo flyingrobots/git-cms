@@ -742,6 +742,13 @@
         state.dirty = false;
         state.trailers = {};
 
+        // Reset history panel to prevent stale data
+        document.getElementById('historySection').open = false;
+        document.getElementById('historyList').innerHTML = '';
+        document.getElementById('historyPreview').style.display = 'none';
+        state.historyVersions = [];
+        state.selectedVersion = null;
+
         document.getElementById('slugInput').value = '';
         document.getElementById('slugInput').disabled = false;
         document.getElementById('titleInput').value = '';
