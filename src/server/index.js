@@ -87,6 +87,27 @@ function sendError(res, err) {
   return send(res, 500, { error: err.message });
 }
 
+const MAX_BODY_BYTES = 1_048_576; // 1 MB
+const SHA_RE = /^[0-9a-f]{40}$/;
+
+function readBody(req, limit = MAX_BODY_BYTES) {
+  return new Promise((resolve, reject) => {
+    let body = '';
+    let bytes = 0;
+    req.on('data', (chunk) => {
+      bytes += chunk.length;
+      if (bytes > limit) {
+        req.destroy();
+        reject(new CmsValidationError('Request body too large', { code: 'body_too_large' }));
+        return;
+      }
+      body += chunk;
+    });
+    req.on('end', () => resolve(body));
+    req.on('error', reject);
+  });
+}
+
 function logError(err) {
   if (!(err instanceof CmsValidationError)) {
     console.error(err);
@@ -127,151 +148,139 @@ async function handler(req, res) {
 
       // POST /api/cms/snapshot
       if (req.method === 'POST' && pathname === '/api/cms/snapshot') {
-        let body = '';
-        req.on('data', (c) => (body += c));
-        req.on('end', async () => {
-          try {
-            const { slug: rawSlug, title, body: content, trailers } = JSON.parse(body || '{}');
-            if (!rawSlug || !title) return send(res, 400, { error: 'slug and title required' });
-            const slug = canonicalizeSlug(rawSlug);
-            const result = await cms.saveSnapshot({ slug, title, body: content, trailers });
-            return send(res, 200, result);
-          } catch (err) {
-            logError(err);
-            return sendError(res, err);
-          }
-        });
-        return;
+        try {
+          const body = await readBody(req);
+          const { slug: rawSlug, title, body: content, trailers } = JSON.parse(body || '{}');
+          if (!rawSlug || !title) return send(res, 400, { error: 'slug and title required' });
+          const slug = canonicalizeSlug(rawSlug);
+          const result = await cms.saveSnapshot({ slug, title, body: content, trailers });
+          return send(res, 200, result);
+        } catch (err) {
+          logError(err);
+          return sendError(res, err);
+        }
       }
 
       // POST /api/cms/publish
       if (req.method === 'POST' && pathname === '/api/cms/publish') {
-        let body = '';
-        req.on('data', (c) => (body += c));
-        req.on('end', async () => {
-          try {
-            const { slug: rawSlug, sha } = JSON.parse(body || '{}');
-            if (!rawSlug) return send(res, 400, { error: 'slug required' });
-            const slug = canonicalizeSlug(rawSlug);
-            const result = await cms.publishArticle({ slug, sha });
-            return send(res, 200, result);
-          } catch (err) {
-            logError(err);
-            return sendError(res, err);
-          }
-        });
-        return;
+        try {
+          const body = await readBody(req);
+          const { slug: rawSlug, sha } = JSON.parse(body || '{}');
+          if (!rawSlug) return send(res, 400, { error: 'slug required' });
+          const slug = canonicalizeSlug(rawSlug);
+          const result = await cms.publishArticle({ slug, sha });
+          return send(res, 200, result);
+        } catch (err) {
+          logError(err);
+          return sendError(res, err);
+        }
       }
 
       // POST /api/cms/unpublish
       if (req.method === 'POST' && pathname === '/api/cms/unpublish') {
-        let body = '';
-        req.on('data', (c) => (body += c));
-        req.on('end', async () => {
-          try {
-            const { slug: rawSlug } = JSON.parse(body || '{}');
-            if (!rawSlug) return send(res, 400, { error: 'slug required' });
-            const slug = canonicalizeSlug(rawSlug);
-            const result = await cms.unpublishArticle({ slug });
-            return send(res, 200, result);
-          } catch (err) {
-            logError(err);
-            return sendError(res, err);
-          }
-        });
-        return;
+        try {
+          const body = await readBody(req);
+          const { slug: rawSlug } = JSON.parse(body || '{}');
+          if (!rawSlug) return send(res, 400, { error: 'slug required' });
+          const slug = canonicalizeSlug(rawSlug);
+          const result = await cms.unpublishArticle({ slug });
+          return send(res, 200, result);
+        } catch (err) {
+          logError(err);
+          return sendError(res, err);
+        }
       }
 
       // POST /api/cms/revert
       if (req.method === 'POST' && pathname === '/api/cms/revert') {
-        let body = '';
-        req.on('data', (c) => (body += c));
-        req.on('end', async () => {
-          try {
-            const { slug: rawSlug } = JSON.parse(body || '{}');
-            if (!rawSlug) return send(res, 400, { error: 'slug required' });
-            const slug = canonicalizeSlug(rawSlug);
-            const result = await cms.revertArticle({ slug });
-            return send(res, 200, result);
-          } catch (err) {
-            logError(err);
-            return sendError(res, err);
-          }
-        });
-        return;
+        try {
+          const body = await readBody(req);
+          const { slug: rawSlug } = JSON.parse(body || '{}');
+          if (!rawSlug) return send(res, 400, { error: 'slug required' });
+          const slug = canonicalizeSlug(rawSlug);
+          const result = await cms.revertArticle({ slug });
+          return send(res, 200, result);
+        } catch (err) {
+          logError(err);
+          return sendError(res, err);
+        }
       }
 
       // GET /api/cms/history?slug=xxx&limit=50
       if (req.method === 'GET' && pathname === '/api/cms/history') {
-        const { slug: rawSlug, limit: rawLimit } = query;
-        if (!rawSlug) return send(res, 400, { error: 'slug required' });
-        const slug = canonicalizeSlug(rawSlug);
-        const limit = Math.max(1, Math.min(200, parseInt(rawLimit, 10) || 50));
-        return send(res, 200, await cms.getArticleHistory({ slug, limit }));
+        try {
+          const { slug: rawSlug, limit: rawLimit } = query;
+          if (!rawSlug) return send(res, 400, { error: 'slug required' });
+          const slug = canonicalizeSlug(rawSlug);
+          const limit = Math.max(1, Math.min(200, parseInt(rawLimit, 10) || 50));
+          return send(res, 200, await cms.getArticleHistory({ slug, limit }));
+        } catch (err) {
+          logError(err);
+          return sendError(res, err);
+        }
       }
 
       // GET /api/cms/show-version?slug=xxx&sha=yyy
       if (req.method === 'GET' && pathname === '/api/cms/show-version') {
-        const { slug: rawSlug, sha } = query;
-        if (!rawSlug || !sha) return send(res, 400, { error: 'slug and sha required' });
-        const slug = canonicalizeSlug(rawSlug);
-        const result = await cms.readVersion({ slug, sha });
-        // Cap response body at 1MB
-        if (result.body && Buffer.byteLength(result.body, 'utf8') > 1_048_576) {
-          result.body = result.body.slice(0, 1_048_576);
-          result.trailers = { ...result.trailers, truncated: 'true' };
+        try {
+          const { slug: rawSlug, sha } = query;
+          if (!rawSlug || !sha) return send(res, 400, { error: 'slug and sha required' });
+          if (!SHA_RE.test(sha)) return send(res, 400, { error: 'sha must be a 40-character hex string' });
+          const slug = canonicalizeSlug(rawSlug);
+          const result = await cms.readVersion({ slug, sha });
+          // Cap response body at 1MB (byte-accurate truncation)
+          if (result.body && Buffer.byteLength(result.body, 'utf8') > MAX_BODY_BYTES) {
+            result.body = Buffer.from(result.body, 'utf8').subarray(0, MAX_BODY_BYTES).toString('utf8');
+            result.trailers = { ...result.trailers, truncated: 'true' };
+          }
+          return send(res, 200, result);
+        } catch (err) {
+          logError(err);
+          return sendError(res, err);
         }
-        return send(res, 200, result);
       }
 
       // POST /api/cms/restore
       if (req.method === 'POST' && pathname === '/api/cms/restore') {
-        let body = '';
-        req.on('data', (c) => (body += c));
-        req.on('end', async () => {
-          try {
-            const { slug: rawSlug, sha } = JSON.parse(body || '{}');
-            if (!rawSlug || !sha) return send(res, 400, { error: 'slug and sha required' });
-            const slug = canonicalizeSlug(rawSlug);
-            const result = await cms.restoreVersion({ slug, sha });
-            return send(res, 200, result);
-          } catch (err) {
-            logError(err);
-            return sendError(res, err);
-          }
-        });
-        return;
+        try {
+          const body = await readBody(req);
+          const { slug: rawSlug, sha } = JSON.parse(body || '{}');
+          if (!rawSlug || !sha) return send(res, 400, { error: 'slug and sha required' });
+          if (!SHA_RE.test(sha)) return send(res, 400, { error: 'sha must be a 40-character hex string' });
+          const slug = canonicalizeSlug(rawSlug);
+          const result = await cms.restoreVersion({ slug, sha });
+          return send(res, 200, result);
+        } catch (err) {
+          logError(err);
+          return sendError(res, err);
+        }
       }
 
       // POST /api/cms/upload
       if (req.method === 'POST' && pathname === '/api/cms/upload') {
-        let body = '';
-        req.on('data', (c) => (body += c));
-        req.on('end', async () => {
-          try {
-            const { slug: rawSlug, filename, data } = JSON.parse(body || '{}');
-            if (!rawSlug || !filename || !data) return send(res, 400, { error: 'slug, filename, data required' });
-            const slug = canonicalizeSlug(rawSlug);
-            
-            const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cms-upload-'));
-            const filePath = path.join(tmpDir, filename);
-            fs.writeFileSync(filePath, Buffer.from(data, 'base64'));
-            
-            const result = await cms.uploadAsset({ slug, filePath, filename });
-            const firstChunk = result.manifest?.chunks?.[0];
-            if (!firstChunk?.digest) {
-              throw new Error('Upload manifest contains no chunks');
-            }
-            const assetUrl = `/blog/${ENV}/assets/${slug}/${firstChunk.digest}`;
-            
-            fs.rmSync(tmpDir, { recursive: true, force: true });
-            return send(res, 200, { ...result, assetUrl });
-          } catch (err) {
-            logError(err);
-            return sendError(res, err);
+        try {
+          const body = await readBody(req, 10 * MAX_BODY_BYTES); // 10 MB for uploads
+          const { slug: rawSlug, filename, data } = JSON.parse(body || '{}');
+          if (!rawSlug || !filename || !data) return send(res, 400, { error: 'slug, filename, data required' });
+          const slug = canonicalizeSlug(rawSlug);
+
+          const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cms-upload-'));
+          const filePath = path.join(tmpDir, filename);
+          fs.writeFileSync(filePath, Buffer.from(data, 'base64'));
+
+          const result = await cms.uploadAsset({ slug, filePath, filename });
+          const firstChunk = result.manifest?.chunks?.[0];
+          if (!firstChunk?.digest) {
+            throw new Error('Upload manifest contains no chunks');
           }
-        });
-        return;
+          const assetUrl = `/blog/${ENV}/assets/${slug}/${firstChunk.digest}`;
+
+          fs.rmSync(tmpDir, { recursive: true, force: true });
+          return send(res, 200, { ...result, assetUrl });
+        } catch (err) {
+          logError(err);
+          return sendError(res, err);
+        }
       }
 
       return send(res, 404, { error: 'API endpoint not found' });

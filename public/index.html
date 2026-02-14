@@ -613,7 +613,8 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ slug, sha }),
         });
-        const data = await res.json();
+        let data;
+        try { data = await res.json(); } catch { data = {}; }
         if (!res.ok) throw Object.assign(new Error(data.error || `Restore failed: ${res.status}`), { code: data.code });
         return data;
       },
@@ -717,6 +718,11 @@
           this.renderTrailers();
           updatePreview();
           this.highlightActive(slug);
+
+          // Refresh history if panel is already open
+          if (document.getElementById('historySection').open) {
+            this.fetchHistory();
+          }
 
           statusEl.textContent = `Loaded ${slug} (${data.sha.slice(0, 7)})`;
         } catch (err) {

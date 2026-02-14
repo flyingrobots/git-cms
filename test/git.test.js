@@ -356,10 +356,10 @@ describe('Version History', () => {
 
   it('restoreVersion preserves history chain (commit count)', async () => {
     await cms.saveSnapshot({ slug: 'restore-chain', title: 'v1', body: 'b1' });
-    const v1 = await cms.saveSnapshot({ slug: 'restore-chain', title: 'v1', body: 'b1' });
-    await cms.saveSnapshot({ slug: 'restore-chain', title: 'v2', body: 'b2' });
+    const v2 = await cms.saveSnapshot({ slug: 'restore-chain', title: 'v2', body: 'b2' });
+    await cms.saveSnapshot({ slug: 'restore-chain', title: 'v3', body: 'b3' });
 
-    await cms.restoreVersion({ slug: 'restore-chain', sha: v1.sha });
+    await cms.restoreVersion({ slug: 'restore-chain', sha: v2.sha });
 
     // After 3 saves + 1 restore = 4 versions in history
     const history = await cms.getArticleHistory({ slug: 'restore-chain' });

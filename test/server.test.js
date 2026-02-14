@@ -253,11 +253,12 @@ describe('Server API (Integration)', () => {
     });
     const v1 = await snap1.json();
     expect(snap1.status).toBe(200);
-    await fetch(`${baseUrl}/api/cms/snapshot`, {
+    const snap2 = await fetch(`${baseUrl}/api/cms/snapshot`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ slug: 'srv-showver', title: 'Second', body: 'second body' }),
     });
+    expect(snap2.status).toBe(200);
 
     const res = await fetch(`${baseUrl}/api/cms/show-version?slug=srv-showver&sha=${v1.sha}`);
     const data = await res.json();

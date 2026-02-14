@@ -318,6 +318,32 @@ export default class CmsService {
   }
 
   /**
+   * Validates that a target SHA exists in an article's ancestry chain.
+   * @private
+   */
+  async _validateAncestry(tipSha, targetSha, slug) {
+    let walk = tipSha;
+    let steps = 0;
+    const walkLimit = 200;
+    while (walk && steps < walkLimit) {
+      if (walk === targetSha) return;
+      const info = await this.graph.getNodeInfo(walk);
+      walk = info.parents?.[0] || null;
+      steps++;
+    }
+    if (steps >= walkLimit) {
+      throw new CmsValidationError(
+        `History walk limit (${walkLimit}) exceeded for article "${slug}"; SHA "${targetSha}" may exist beyond the search window`,
+        { code: 'history_walk_limit_exceeded', field: 'sha' }
+      );
+    }
+    throw new CmsValidationError(
+      `SHA "${targetSha}" is not in the history of article "${slug}"`,
+      { code: 'invalid_version_for_article', field: 'sha' }
+    );
+  }
+
+  /**
    * Returns version history for an article by walking the parent chain.
    * @param {{ slug: string, limit?: number }} options
    * @returns {Promise<Array<{ sha: string, title: string, status: string, author: string, date: string }>>}
@@ -325,7 +351,8 @@ export default class CmsService {
   async getArticleHistory({ slug, limit = 50 }) {
     const canonicalSlug = canonicalizeSlug(slug);
     const draftRef = this._refFor(canonicalSlug, 'articles');
-    const sha = await this.graph.readRef(draftRef);
+    const pubRef = this._refFor(canonicalSlug, 'published');
+    const sha = await this.graph.readRef(draftRef) || await this.graph.readRef(pubRef);
 
     if (!sha) {
       throw new CmsValidationError(
@@ -338,8 +365,10 @@ export default class CmsService {
     let current = sha;
 
     while (current && versions.length < limit) {
-      const info = await this.graph.getNodeInfo(current);
-      const message = await this.graph.showNode(current);
+      const [info, message] = await Promise.all([
+        this.graph.getNodeInfo(current),
+        this.graph.showNode(current),
+      ]);
       const decoded = this.codec.decode(message);
 
       versions.push({
@@ -364,14 +393,17 @@ export default class CmsService {
   async readVersion({ slug, sha }) {
     const canonicalSlug = canonicalizeSlug(slug);
     const draftRef = this._refFor(canonicalSlug, 'articles');
-    const draftSha = await this.graph.readRef(draftRef);
+    const tipSha = await this.graph.readRef(draftRef);
 
-    if (!draftSha) {
+    if (!tipSha) {
       throw new CmsValidationError(
         `Article not found: "${canonicalSlug}"`,
         { code: 'article_not_found', field: 'slug' }
       );
     }
+
+    // Ancestry validation: verify SHA belongs to this article's lineage
+    await this._validateAncestry(tipSha, sha, canonicalSlug);
 
     const message = await this.graph.showNode(sha);
     const decoded = this.codec.decode(message);
@@ -398,37 +430,24 @@ export default class CmsService {
     }
 
     // Ancestry validation: walk parent chain to verify target SHA belongs to this article
-    let found = false;
-    let walk = draftSha;
-    let steps = 0;
-    const walkLimit = 200;
-    while (walk && steps < walkLimit) {
-      if (walk === sha) { found = true; break; }
-      const info = await this.graph.getNodeInfo(walk);
-      walk = info.parents?.[0] || null;
-      steps++;
-    }
-    if (!found) {
-      throw new CmsValidationError(
-        `SHA "${sha}" is not in the history of article "${canonicalSlug}"`,
-        { code: 'invalid_version_for_article', field: 'sha' }
-      );
-    }
+    await this._validateAncestry(draftSha, sha, canonicalSlug);
 
     // Read target SHA content
     const targetMessage = await this.graph.showNode(sha);
     const decoded = this.codec.decode(targetMessage);
-    const { updatedat: _, restoredfromsha: _r, restoredat: _ra, ...restTrailers } = decoded.trailers;
+    const trailers = decoded.trailers || {};
+    const { updatedat: _, restoredfromsha: _r, restoredat: _ra, ...restTrailers } = trailers;
 
+    const now = new Date().toISOString();
     const newMessage = this.codec.encode({
       title: decoded.title,
       body: decoded.body,
       trailers: {
         ...restTrailers,
         status: STATES.DRAFT,
-        updatedAt: new Date().toISOString(),
+        updatedAt: now,
         restoredFromSha: sha,
-        restoredAt: new Date().toISOString(),
+        restoredAt: now,
       },
     });
 
