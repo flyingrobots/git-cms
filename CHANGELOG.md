@@ -2,6 +2,23 @@
 
 All notable changes to git-cms are documented in this file.
 
+## [1.1.4] — 2026-02-14
+
+### Changed
+
+- Consolidate and update documentation for M1.1, M1.2, M1.3, CE2, and CE3
+- `QUICK_REFERENCE.md` is now the canonical reference for all 9 CLI commands, 10 HTTP API endpoints, and state machine
+- `docs/GETTING_STARTED.md` updated with version history, migration, unpublish/revert workflows
+- `README.md` updated with missing CLI commands and choose-your-path navigation
+- `ROADMAP.md` milestone statuses updated (M1.1, M1.2, M1.3, CE2, CE3 → complete)
+- Root `GETTING_STARTED.md` and `REPO_WALKTHROUGH.md` replaced with redirect stubs
+- `docs/ADR.md` file tree updated (removed `REPO_WALKTHROUGH.md`, added `CONTENT_ID_POLICY.md` and `LAYOUT_SPEC.md`)
+
+### Added
+
+- `scripts/check-doc-drift.sh` — automated doc drift detection (CLI commands, HTTP endpoints, stale references)
+- `npm run check:docs` script
+
 ## [1.1.3] — 2026-02-14
 
 ### Fixed
@@ -102,6 +119,7 @@ All notable changes to git-cms are documented in this file.
 - **(P2) walkLimit divergence:** Extracted `HISTORY_WALK_LIMIT` as a shared exported constant used by both `_validateAncestry` and the server's history limit clamp
 
 [Unreleased]: https://github.com/flyingrobots/git-cms/compare/main...git-stunts
+[1.1.4]: https://github.com/flyingrobots/git-cms/compare/v1.1.3...v1.1.4
 [1.1.3]: https://github.com/flyingrobots/git-cms/compare/v1.1.2...v1.1.3
 [1.1.2]: https://github.com/flyingrobots/git-cms/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/flyingrobots/git-cms/compare/v1.1.0...v1.1.1

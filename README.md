@@ -43,7 +43,7 @@ npm run dev
 
 The tests create, destroy, and manipulate Git repositories. Running low-level plumbing commands on your host filesystem is risky - a typo could affect your local Git setup. That's why we built Docker isolation into everything.
 
-**Read more:** [TESTING_GUIDE.md](./TESTING_GUIDE.md) | [docs/GETTING_STARTED.md](./docs/GETTING_STARTED.md) | [docs/CONTENT_ID_POLICY.md](./docs/CONTENT_ID_POLICY.md)
+**Read more:** [TESTING_GUIDE.md](./TESTING_GUIDE.md) | [docs/GETTING_STARTED.md](./docs/GETTING_STARTED.md) | [QUICK_REFERENCE.md](./QUICK_REFERENCE.md) | [docs/CONTENT_ID_POLICY.md](./docs/CONTENT_ID_POLICY.md)
 
 ## Features
 
@@ -128,6 +128,32 @@ Publishing fast-forwards `refs/_blog/published/<slug>` to match the draft.
 ```bash
 git cms publish hello-world
 ```
+
+### 6. Unpublish / Revert
+
+```bash
+# Remove from published, keep as unpublished draft
+git cms unpublish hello-world
+
+# Revert to draft state
+git cms revert hello-world
+```
+
+### 7. Layout Version / Migrate
+
+```bash
+# Check repo vs codebase layout version
+git cms layout-version
+
+# Run pending layout migrations (forward-only, idempotent)
+git cms migrate
+```
+
+## Where to Go Next
+
+- **New user?** Start with [`docs/GETTING_STARTED.md`](./docs/GETTING_STARTED.md)
+- **Operator / API user?** See [`QUICK_REFERENCE.md`](./QUICK_REFERENCE.md) for all CLI commands and HTTP endpoints
+- **Architecture / rationale?** Read [`docs/ADR.md`](./docs/ADR.md) and [`docs/LAYOUT_SPEC.md`](./docs/LAYOUT_SPEC.md)
 
 ## License
 

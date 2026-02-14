@@ -147,7 +147,7 @@ INF3 (UI Redesign) ideally after M1.1
 
 ## M1 — Core Content Model + State Machine
 
-### M1.1 — Define canonical Content IDs + paths *(ADD — MUST EXIST)*
+### M1.1 — Define canonical Content IDs + paths *(complete)*
 
 - **User Story:** As a developer, I understand how content is identified and where it lives.
 - **Requirements:** Slug rules (charset, length, uniqueness); rename semantics; ref naming conventions; content ID immutability policy.
@@ -166,7 +166,7 @@ INF3 (UI Redesign) ideally after M1.1
 
 ---
 
-### M1.2 — Draft/Published state machine + transitions *(ADD — MUST EXIST)*
+### M1.2 — Draft/Published state machine + transitions *(complete)*
 
 - **User Story:** As a developer, the Draft→Published→Unpublished→Reverted states are explicit and deterministic.
 - **Requirements:** State enum; allowed transitions; revert semantics (new commit vs ref move); unpublish semantics (tombstone vs delete).
@@ -185,7 +185,7 @@ INF3 (UI Redesign) ideally after M1.1
 
 ---
 
-### M1.3 — Migration + repo layout spec *(ADD — MUST EXIST)*
+### M1.3 — Migration + repo layout spec *(complete)*
 
 - **User Story:** As a maintainer, I know where content lives and how to migrate between versions.
 - **Requirements:** Ref namespace spec; index structure; migration strategy; backward compatibility policy.
@@ -304,7 +304,7 @@ INF3 (UI Redesign) ideally after M1.1
 
 ---
 
-### CE2 — Add autosave for drafts
+### CE2 — Add autosave for drafts *(complete)*
 
 - **User Story:** As an author, my draft is never lost because I sneezed near a browser tab.
 - **Requirements:** Debounce; conflict strategy; "last saved" indicator; local vs repo save decision.
@@ -324,7 +324,7 @@ INF3 (UI Redesign) ideally after M1.1
 
 ---
 
-### CE3 — Add version history browser
+### CE3 — Add version history browser *(complete)*
 
 - **User Story:** As an editor, I can browse and diff prior versions and restore one.
 - **Requirements:** Map commits to content IDs; diff view; restore action creates new commit; permissions later.

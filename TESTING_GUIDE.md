@@ -195,6 +195,8 @@ docker compose run --rm test
 - Runs Vitest integration tests
 - Creates temporary Git repos in `/tmp`
 - Tests CRUD operations, encryption, API endpoints
+- Version history browsing and restore (CE3)
+- Layout migration framework (M1.3)
 - Cleans up after completion
 
 **Safe because:** All tests run in an isolated Docker container with temporary repos.

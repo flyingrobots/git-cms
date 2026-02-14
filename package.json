@@ -1,6 +1,6 @@
 {
   "name": "git-cms",
-  "version": "1.1.3",
+  "version": "1.1.4",
   "description": "A serverless, database-free CMS built on Git plumbing.",
   "type": "module",
   "bin": {
@@ -13,6 +13,7 @@
     "quickstart": "./scripts/quickstart.sh",
     "setup": "./scripts/setup.sh",
     "check:deps": "node scripts/check-dependency-integrity.mjs",
+    "check:docs": "./scripts/check-doc-drift.sh",
     "test": "./test/run-docker.sh",
     "test:setup": "./test/run-setup-tests.sh",
     "test:local": "vitest run",

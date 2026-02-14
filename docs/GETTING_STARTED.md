@@ -1,5 +1,7 @@
 # Getting Started with Git CMS
 
+> Validated against v1.1.3 on 2026-02-14.
+
 **⚠️ IMPORTANT: This project manipulates Git repositories at a low level. Always use Docker for testing to protect your local Git setup.**
 
 ---
@@ -111,6 +113,12 @@ node bin/git-cms.js publish hello-world
 # Read it back
 node bin/git-cms.js show hello-world
 
+# Unpublish (removes from published, keeps as unpublished draft)
+node bin/git-cms.js unpublish hello-world
+
+# Revert to draft state
+node bin/git-cms.js revert hello-world
+
 # Exit the container
 exit
 ```
@@ -140,6 +148,47 @@ exit
 - Your article stored as a commit message
 - Commits pointing to the "empty tree" (no files touched!)
 - Refs acting as pointers to "current" versions
+
+### Step 6: Browse Version History
+
+Every draft save creates a new commit, so you get infinite version history for free.
+
+In the Admin UI:
+1. Open an article you've edited multiple times
+2. Expand the **History** panel on the right
+3. Click any version to preview its content
+4. Click **Restore** to bring back that version as a new draft
+
+The HTTP API provides three endpoints for version history — see [`QUICK_REFERENCE.md`](../QUICK_REFERENCE.md) for the full API table:
+- `GET /api/cms/history` — list version summaries
+- `GET /api/cms/show-version` — read a specific historical version
+- `POST /api/cms/restore` — restore a version as a new draft
+
+**Restoring creates a new commit — no history is rewritten.**
+
+### Step 7: Run Migrations (When Upgrading)
+
+When upgrading git-cms to a new version, check whether your repository's layout needs migration:
+
+```bash
+# Inside the container
+docker compose exec app sh
+
+# Check current layout version
+node bin/git-cms.js layout-version
+# Repo:     v0
+# Codebase: v1
+
+# Run pending migrations
+node bin/git-cms.js migrate
+# Migrated layout: v0 → v1 (applied: 1)
+```
+
+Things to know about migrations:
+- **Idempotent:** Safe to run multiple times — already-applied migrations are skipped
+- **Forward-only:** Rollback is not supported (by design)
+- **No dry-run mode:** Migrations are no-ops until structural changes exist between versions
+- **Backup first:** Run `git clone --mirror <repo>` before migrating production repos
 
 ---
 
