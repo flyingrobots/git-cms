@@ -1077,6 +1077,11 @@
         const { sha } = state.selectedVersion;
         if (!confirm(`Restore version ${sha.slice(0, 7)}? This creates a new draft with the old content.`)) return;
 
+        // Prevent autosave from racing the restore and suppress
+        // the redundant "unsaved changes" prompt in loadArticle.
+        this.clearAutosave();
+        state.dirty = false;
+
         try {
           await api.restore({ slug: state.currentSlug, sha });
           toast('Version restored', 'success');
