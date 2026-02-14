@@ -258,6 +258,7 @@ async function handler(req, res) {
 
       // POST /api/cms/upload
       if (req.method === 'POST' && pathname === '/api/cms/upload') {
+        let tmpDir;
         try {
           const body = await readBody(req, 10 * MAX_BODY_BYTES); // 10 MB for uploads
           const { slug: rawSlug, filename, data } = JSON.parse(body || '{}');
@@ -268,7 +269,7 @@ async function handler(req, res) {
             return send(res, 400, { error: 'Invalid filename' });
           }
 
-          const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cms-upload-'));
+          tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cms-upload-'));
           const filePath = path.join(tmpDir, safeFilename);
           fs.writeFileSync(filePath, Buffer.from(data, 'base64'));
 
@@ -279,11 +280,14 @@ async function handler(req, res) {
           }
           const assetUrl = `/blog/${ENV}/assets/${slug}/${firstChunk.digest}`;
 
-          fs.rmSync(tmpDir, { recursive: true, force: true });
           return send(res, 200, { ...result, assetUrl });
         } catch (err) {
           logError(err);
           return sendError(res, err);
+        } finally {
+          if (tmpDir) {
+            try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch {}
+          }
         }
       }
 
