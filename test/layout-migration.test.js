@@ -57,6 +57,14 @@ describe('readLayoutVersion', () => {
       code: 'layout_version_invalid',
     });
   });
+
+  it('throws on whitespace-only value', async () => {
+    await graph.configSet(LAYOUT_VERSION_KEY, '   ');
+    await expect(readLayoutVersion(graph)).rejects.toMatchObject({
+      name: 'CmsValidationError',
+      code: 'layout_version_invalid',
+    });
+  });
 });
 
 describe('writeLayoutVersion', () => {

@@ -101,6 +101,6 @@ export async function migrate({ graph, refPrefix }) {
     applied.push(target);
   }
 
-  const to = await readLayoutVersion(graph);
+  const to = applied.length > 0 ? applied[applied.length - 1] : from;
   return { from, to, applied };
 }
