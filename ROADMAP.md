@@ -623,6 +623,36 @@ INF3 (UI Redesign) ideally after M1.1
 
 ---
 
+### DOC4 — Generate state diagram from ContentStatePolicy.js
+
+- **User Story:** As a maintainer, the state machine diagram in QUICK_REFERENCE.md stays in sync with code automatically — no manual ASCII art updates after policy changes.
+- **Requirements:** Read `TRANSITIONS` map from `ContentStatePolicy.js`; generate ASCII or Mermaid diagram; write into QUICK_REFERENCE.md between sentinel comments.
+- **Scope:** Script + sentinel markers in QUICK_REFERENCE.md.
+- **Est. Complexity:** ~100–250 LoC
+- **Blocked By:** None
+
+---
+
+### DOC5 — Add `test:docs` target for drift script regression tests
+
+- **User Story:** As a maintainer, I can verify that `check-doc-drift.sh` itself catches real drift — with intentional drift scenarios as test fixtures.
+- **Requirements:** Fixture files with missing CLI commands, missing endpoints, stale references; test harness runs drift script against fixtures and asserts expected failures.
+- **Scope:** Test fixtures + test runner script + `npm run test:docs` target.
+- **Est. Complexity:** ~80–200 LoC
+- **Blocked By:** None
+
+---
+
+### DOC6 — Port check-doc-drift.sh to JavaScript
+
+- **User Story:** As a maintainer, the doc drift checker uses the same language and test patterns as the rest of the codebase — improving maintainability and cross-platform support.
+- **Requirements:** Rewrite `check-doc-drift.sh` as a Node.js script; same checks (CLI commands, HTTP endpoints, stale references, root GS links); integrate with Vitest for testability.
+- **Scope:** New JS script replacing shell script; update `npm run check:docs`.
+- **Est. Complexity:** ~150–400 LoC
+- **Blocked By:** None (DOC5 provides regression safety net)
+
+---
+
 ## Already Published
 
 - `@git-stunts/plumbing`
