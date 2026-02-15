@@ -591,6 +591,38 @@ INF3 (UI Redesign) ideally after M1.1
 
 ---
 
+## Backlog — Doc Tooling (Immediate Follow-up)
+
+### DOC1 — Add drift check to CI pipeline
+
+- **User Story:** As a maintainer, doc drift is caught automatically before merge — not manually after the fact.
+- **Requirements:** Wire `npm run check:docs` into pre-push hook or CI workflow; fail the build on drift.
+- **Scope:** CI config + optional git hook setup.
+- **Est. Complexity:** ~30–80 LoC
+- **Blocked By:** None
+
+---
+
+### DOC2 — Add `--fix` mode to check-doc-drift.sh
+
+- **User Story:** As a maintainer, I can auto-regenerate the CLI and HTTP API tables in QUICK_REFERENCE.md from source instead of editing them by hand.
+- **Requirements:** Parse `bin/git-cms.js` switch/case and `src/server/index.js` endpoint definitions; generate markdown tables; write them into QUICK_REFERENCE.md between sentinel comments.
+- **Scope:** Script enhancement.
+- **Est. Complexity:** ~100–300 LoC
+- **Blocked By:** None
+
+---
+
+### DOC3 — Markdown link checker
+
+- **User Story:** As a maintainer, broken internal links (`[text](path)` pointing to nonexistent files) are caught before merge.
+- **Requirements:** Walk all `.md` files; resolve relative links; report broken targets; exclude external URLs.
+- **Scope:** New script or integration with existing `check-doc-drift.sh`.
+- **Est. Complexity:** ~80–200 LoC
+- **Blocked By:** None
+
+---
+
 ## Already Published
 
 - `@git-stunts/plumbing`
