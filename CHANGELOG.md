@@ -6,6 +6,7 @@ All notable changes to git-cms are documented in this file.
 
 ### Fixed
 
+- **(Security) Git identity leakage:** Removed `git config --global` from CI workflow (`.github/workflows/ci.yml`). Scripts now use local repository configuration to prevent accidental modification of host global settings if workflows are executed locally (e.g., via `act`).
 - `QUICK_REFERENCE.md`: `revert` command description corrected — sets state to `reverted`, not `draft`
 - `QUICK_REFERENCE.md`: state machine diagram now shows draft→reverted transition and fixes reverted block semantics
 - `QUICK_REFERENCE.md`: state derivation rule clarified — "draft ref only" requires no `Status` trailer or `Status: draft`
