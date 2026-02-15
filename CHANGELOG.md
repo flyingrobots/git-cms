@@ -2,6 +2,20 @@
 
 All notable changes to git-cms are documented in this file.
 
+## [1.1.5] — 2026-02-14
+
+### Fixed
+
+- `QUICK_REFERENCE.md`: `revert` command description corrected — sets state to `reverted`, not `draft`
+- `QUICK_REFERENCE.md`: state machine diagram now shows draft→reverted transition and fixes reverted block semantics
+- `QUICK_REFERENCE.md`: state derivation rule clarified — "draft ref only" requires no `Status` trailer or `Status: draft`
+- `QUICK_REFERENCE.md`: `<40-hex>` replaced with `<oid>` for hash-format-agnostic docs
+- `QUICK_REFERENCE.md`: `{ slug, sha? }` replaced with explicit `sha (optional)` notation
+- `docs/GETTING_STARTED.md`: migration walkthrough clarifies no-dry-run vs idempotency
+- `check-doc-drift.sh`: API endpoint matching uses backtick-delimited grep (prevents substring false positives)
+- `check-doc-drift.sh`: deleted-file search recurses into docs subdirectories
+- `check-doc-drift.sh`: root GS links regex handles `../` relative path prefixes
+
 ## [1.1.4] — 2026-02-14
 
 ### Changed

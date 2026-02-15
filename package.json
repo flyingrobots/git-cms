@@ -1,6 +1,6 @@
 {
   "name": "git-cms",
-  "version": "1.1.4",
+  "version": "1.1.5",
   "description": "A serverless, database-free CMS built on Git plumbing.",
   "type": "module",
   "bin": {

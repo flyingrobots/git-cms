@@ -1,6 +1,6 @@
 # Git CMS Quick Reference
 
-> Validated against v1.1.4 on 2026-02-14.
+> Validated against v1.1.5 on 2026-02-14.
 
 One-page cheat sheet for Git CMS commands, API endpoints, and concepts.
 
