@@ -19,6 +19,13 @@ All notable changes to git-cms are documented in this file.
 - `scripts/check-doc-drift.sh` — automated doc drift detection (CLI commands, HTTP endpoints, stale references)
 - `npm run check:docs` script
 
+### Fixed
+
+- Doc freshness banners now reference v1.1.4 (was v1.1.3)
+- `check-doc-drift.sh`: CLI/API regex broadened to `[a-z0-9_-]+` for future-proofing
+- `check-doc-drift.sh`: CLI command matching uses backtick-delimited grep to prevent substring false positives
+- `check-doc-drift.sh`: `root_gs_links` check was computed but never evaluated (dead code)
+
 ## [1.1.3] — 2026-02-14
 
 ### Fixed
