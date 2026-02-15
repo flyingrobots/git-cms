@@ -29,9 +29,12 @@ jobs:
 
       - name: Configure Git User
         run: |
-          git config user.email "ci@git-cms.local"
-          git config user.name "CI Bot"
-          git config init.defaultBranch main
+          # Redirect global git config to a file in the workspace to avoid polluting the host system
+          echo "GIT_CONFIG_GLOBAL=${{ github.workspace }}/.gitconfig_ci" >> $GITHUB_ENV
+          export GIT_CONFIG_GLOBAL="${{ github.workspace }}/.gitconfig_ci"
+          git config --global user.email "ci@git-cms.local"
+          git config --global user.name "CI Bot"
+          git config --global init.defaultBranch main
 
       - name: Run Local Integration Tests
         run: npm run test:local
@@ -66,9 +69,12 @@ jobs:
       
       - name: Configure Git User
         run: |
-          git config user.email "ci@git-cms.local"
-          git config user.name "CI Bot"
-          git config init.defaultBranch main
+          # Redirect global git config to a file in the workspace to avoid polluting the host system
+          echo "GIT_CONFIG_GLOBAL=${{ github.workspace }}/.gitconfig_ci" >> $GITHUB_ENV
+          export GIT_CONFIG_GLOBAL="${{ github.workspace }}/.gitconfig_ci"
+          git config --global user.email "ci@git-cms.local"
+          git config --global user.name "CI Bot"
+          git config --global init.defaultBranch main
 
       - name: Install Dependencies
         run: npm ci
