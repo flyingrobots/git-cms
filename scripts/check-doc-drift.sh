@@ -45,8 +45,8 @@ done
 deleted_files=("REPO_WALKTHROUGH.md")
 
 for file in "${deleted_files[@]}"; do
-  # Search all markdown files except the stub itself, QUICK_REFERENCE (documents the removal), and CHANGELOG (historical entries)
-  offenders=$(grep -rl --include='*.md' "$file" "$ROOT" "$ROOT"/docs 2>/dev/null | grep -v "$ROOT/$file" | grep -v "$ROOT/QUICK_REFERENCE.md" | grep -v "$ROOT/CHANGELOG.md" || true)
+  # Search all markdown files recursively except the stub itself, QUICK_REFERENCE (documents the removal), and CHANGELOG (historical entries)
+  offenders=$(grep -rl --include='*.md' "$file" "$ROOT" 2>/dev/null | grep -v "$ROOT/$file" | grep -v "$ROOT/QUICK_REFERENCE.md" | grep -v "$ROOT/CHANGELOG.md" || true)
   if [ -n "$offenders" ]; then
     echo "DRIFT: Deleted file '$file' still referenced in: $offenders"
     errors=$((errors + 1))
@@ -54,8 +54,9 @@ for file in "${deleted_files[@]}"; do
 done
 
 # ── 4. Root GETTING_STARTED.md links from docs/ ─────────────────────────────
-# docs/ files should link to docs/GETTING_STARTED.md, not the root redirect stub
-root_gs_links=$(grep -rnE '\[.*\]\((\.\.\/)?GETTING_STARTED\.md\)' "$ROOT"/docs/ --include='*.md' 2>/dev/null || true)
+# docs/ files should link to docs/GETTING_STARTED.md, not the root redirect stub.
+# This search is recursive to catch subdirectories like docs/operations/
+root_gs_links=$(grep -rnE '\[.*\]\((\.\.\/)*GETTING_STARTED\.md\)' "$ROOT/docs" --include='*.md' 2>/dev/null || true)
 if [ -n "$root_gs_links" ]; then
   echo "DRIFT: docs/ files link to root GETTING_STARTED.md instead of docs/GETTING_STARTED.md:"
   echo "$root_gs_links"

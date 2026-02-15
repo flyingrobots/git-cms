@@ -42,7 +42,7 @@ All 9 commands available via `node bin/git-cms.js <command>` or `git cms <comman
 | `draft` | `echo "body" \| git cms draft <slug> "Title"` | Create or update a draft (reads body from stdin) |
 | `publish` | `git cms publish <slug>` | Fast-forward published ref to match draft |
 | `unpublish` | `git cms unpublish <slug>` | Remove from published, keep as unpublished draft |
-| `revert` | `git cms revert <slug>` | Revert article to reverted state (draft ref with `Status: reverted`) |
+| `revert` | `git cms revert <slug>` | Move article to 'reverted' state (creates new draft commit with `Status: reverted` trailer) |
 | `list` | `git cms list` | List all draft articles |
 | `show` | `git cms show <slug>` | Print article title and body |
 | `serve` | `git cms serve` | Start HTTP API + Admin UI on port 4638 |
@@ -65,7 +65,7 @@ node bin/git-cms.js publish my-slug
 # Unpublish
 node bin/git-cms.js unpublish my-slug
 
-# Revert to draft
+# Revert to 'reverted' state
 node bin/git-cms.js revert my-slug
 
 # Read article content
@@ -96,8 +96,8 @@ All endpoints are served by `git cms serve` (default port 4638). Slugs are NFKC-
 |--------|------|---------------|-------------|
 | `GET` | `/api/cms/list` | `?kind=articles\|published` | List articles by kind |
 | `GET` | `/api/cms/show` | `?slug=xxx&kind=articles` | Read article content |
-| `POST` | `/api/cms/snapshot` | `{ slug, title, body, trailers? }` | Create or update a draft |
-| `POST` | `/api/cms/publish` | `{ slug, sha (optional) }` | Publish a draft |
+| `POST` | `/api/cms/snapshot` | `{ slug, title, body, trailers (optional) }` | Create or update a draft |
+| `POST` | `/api/cms/publish` | `{ slug, sha (optional) }` | Publish a draft (omitting `sha` uses optimistic concurrency) |
 | `POST` | `/api/cms/unpublish` | `{ slug }` | Unpublish an article |
 | `POST` | `/api/cms/revert` | `{ slug }` | Revert to draft state |
 | `GET` | `/api/cms/history` | `?slug=xxx&limit=50` | List version history (max 200) |

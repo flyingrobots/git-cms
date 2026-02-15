@@ -8,10 +8,13 @@ All notable changes to git-cms are documented in this file.
 
 - **(Security) Git identity leakage:** Removed `git config --global` from host-level modification in CI workflow (`.github/workflows/ci.yml`). Scripts now use an isolated global config file via `GIT_CONFIG_GLOBAL` redirected to the workspace, preventing accidental modification of host global settings if workflows are executed locally (e.g., via `act`).
 - `QUICK_REFERENCE.md`: `revert` command description corrected — sets state to `reverted`, not `draft`
-- `QUICK_REFERENCE.md`: state machine diagram now shows draft→reverted transition and fixes reverted block semantics
+- `QUICK_REFERENCE.md`: state machine diagram refined to accurately show `draft`→`reverted` transition
+- `QUICK_REFERENCE.md`: HTTP API table uses canonical `optional` notation and clarifies optimistic concurrency for `publish`
+- `docs/GETTING_STARTED.md`: migration walkthrough refined (separated idempotency/dry-run, clarified no-op behavior)
+- `check-doc-drift.sh`: recursive search for deleted files and root-level documentation links
+- `check-doc-drift.sh`: improved regex for CLI and API matching to prevent substring false positives and support underscores/digits
 - `QUICK_REFERENCE.md`: state derivation rule clarified — "draft ref only" requires no `Status` trailer or `Status: draft`
 - `QUICK_REFERENCE.md`: `<40-hex>` replaced with `<oid>` for hash-format-agnostic docs
-- `QUICK_REFERENCE.md`: `{ slug, sha? }` replaced with explicit `sha (optional)` notation
 - `docs/GETTING_STARTED.md`: migration walkthrough clarifies no-dry-run vs idempotency
 - `check-doc-drift.sh`: API endpoint matching uses backtick-delimited grep (prevents substring false positives)
 - `check-doc-drift.sh`: deleted-file search recurses into docs subdirectories
