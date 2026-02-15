@@ -29,9 +29,11 @@ jobs:
 
       - name: Configure Git User
         run: |
-          # Redirect global git config to a file in the workspace to avoid polluting the host system
-          echo "GIT_CONFIG_GLOBAL=${{ github.workspace }}/.gitconfig_ci" >> $GITHUB_ENV
-          export GIT_CONFIG_GLOBAL="${{ github.workspace }}/.gitconfig_ci"
+          # Redirect global git config to a file in /tmp to avoid polluting the host system
+          # and ensure we have write permissions regardless of the workspace setup.
+          touch /tmp/.gitconfig_ci
+          echo "GIT_CONFIG_GLOBAL=/tmp/.gitconfig_ci" >> $GITHUB_ENV
+          export GIT_CONFIG_GLOBAL="/tmp/.gitconfig_ci"
           git config --global user.email "ci@git-cms.local"
           git config --global user.name "CI Bot"
           git config --global init.defaultBranch main
@@ -56,22 +58,20 @@ jobs:
     container:
       image: mcr.microsoft.com/playwright:v1.57.0-jammy
     steps:
-      - uses: actions/checkout@v4
-      
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'npm'
-      
-      # Git is required in the container to perform plumbing operations during E2E tests
+      # Git is required in the container to perform plumbing operations during E2E tests.
+      # Installing it BEFORE checkout ensures actions/checkout performs a real clone.
       - name: Install Git
         run: apt-get update && apt-get install -y --no-install-recommends git && rm -rf /var/lib/apt/lists/*
+
+      - uses: actions/checkout@v4
       
       - name: Configure Git User
         run: |
-          # Redirect global git config to a file in the workspace to avoid polluting the host system
-          echo "GIT_CONFIG_GLOBAL=${{ github.workspace }}/.gitconfig_ci" >> $GITHUB_ENV
-          export GIT_CONFIG_GLOBAL="${{ github.workspace }}/.gitconfig_ci"
+          # Redirect global git config to a file in /tmp to avoid polluting the host system
+          # and ensure we have write permissions regardless of the workspace setup.
+          touch /tmp/.gitconfig_ci
+          echo "GIT_CONFIG_GLOBAL=/tmp/.gitconfig_ci" >> $GITHUB_ENV
+          export GIT_CONFIG_GLOBAL="/tmp/.gitconfig_ci"
           git config --global user.email "ci@git-cms.local"
           git config --global user.name "CI Bot"
           git config --global init.defaultBranch main
