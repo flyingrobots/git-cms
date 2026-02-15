@@ -187,7 +187,7 @@ node bin/git-cms.js migrate
 Things to know about migrations:
 - **Idempotent:** Safe to run multiple times — already-applied migrations are skipped
 - **Forward-only:** Rollback is not supported (by design)
-- **No dry-run mode:** Migrations are no-ops until structural changes exist between versions
+- **No dry-run mode:** Use `git cms layout-version` to check whether migrations are pending before running
 - **Backup first:** Run `git clone --mirror <repo>` before migrating production repos
 
 ---

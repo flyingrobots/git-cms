@@ -42,7 +42,7 @@ All 9 commands available via `node bin/git-cms.js <command>` or `git cms <comman
 | `draft` | `echo "body" \| git cms draft <slug> "Title"` | Create or update a draft (reads body from stdin) |
 | `publish` | `git cms publish <slug>` | Fast-forward published ref to match draft |
 | `unpublish` | `git cms unpublish <slug>` | Remove from published, keep as unpublished draft |
-| `revert` | `git cms revert <slug>` | Revert published/unpublished article back to draft state |
+| `revert` | `git cms revert <slug>` | Revert article to reverted state (draft ref with `Status: reverted`) |
 | `list` | `git cms list` | List all draft articles |
 | `show` | `git cms show <slug>` | Print article title and body |
 | `serve` | `git cms serve` | Start HTTP API + Admin UI on port 4638 |
@@ -97,11 +97,11 @@ All endpoints are served by `git cms serve` (default port 4638). Slugs are NFKC-
 | `GET` | `/api/cms/list` | `?kind=articles\|published` | List articles by kind |
 | `GET` | `/api/cms/show` | `?slug=xxx&kind=articles` | Read article content |
 | `POST` | `/api/cms/snapshot` | `{ slug, title, body, trailers? }` | Create or update a draft |
-| `POST` | `/api/cms/publish` | `{ slug, sha? }` | Publish a draft |
+| `POST` | `/api/cms/publish` | `{ slug, sha (optional) }` | Publish a draft |
 | `POST` | `/api/cms/unpublish` | `{ slug }` | Unpublish an article |
 | `POST` | `/api/cms/revert` | `{ slug }` | Revert to draft state |
 | `GET` | `/api/cms/history` | `?slug=xxx&limit=50` | List version history (max 200) |
-| `GET` | `/api/cms/show-version` | `?slug=xxx&sha=<40-hex>` | Read a specific historical version |
+| `GET` | `/api/cms/show-version` | `?slug=xxx&sha=<oid>` | Read a specific historical version |
 | `POST` | `/api/cms/restore` | `{ slug, sha }` | Restore a historical version as new draft |
 | `POST` | `/api/cms/upload` | `{ slug, filename, data }` | Upload base64-encoded asset (encrypted) |
 
@@ -114,28 +114,27 @@ Articles move through four states. Transitions are enforced by `ContentStatePoli
 ```text
 States: draft, published, unpublished, reverted
 
-         ┌──────────┐
-         │  draft    │◄──────────────────────┐
-         └────┬──────┘                       │
-              │ publish                      │ revert
-              ▼                              │
-         ┌──────────┐    unpublish    ┌──────┴─────┐
-         │ published │───────────────►│ unpublished │
-         └────┬──────┘                └──────┬──────┘
-              │ publish (update)             │ publish
-              └──────────┐                   │
-                         ▼                   │
-                    ┌──────────┐             │
-                    │ published │◄────────────┘
-                    └──────────┘
-
-         ┌──────────┐
-         │ reverted  │──── revert (from draft) ────►  draft
-         └──────────┘
+                           revert
+         ┌──────────┐ ─────────────────► ┌──────────┐
+    ┌───►│  draft    │                    │ reverted  │
+    │    └────┬──────┘ ◄──────────────── └──────────┘
+    │         │ publish      save
+    │         ▼
+    │    ┌──────────┐    unpublish    ┌─────────────┐
+    │    │ published │───────────────►│ unpublished  │
+    │    └────┬──────┘                └──┬────────┬──┘
+    │         │ publish (update)         │        │
+    │         └──────────┐    publish    │        │
+    │                    ▼       │       │        │
+    │               ┌──────────┐│       │        │
+    │               │ published │◄──────┘        │
+    │               └──────────┘                 │
+    │                                  save      │
+    └────────────────────────────────────────────┘
 ```
 
 **Effective state** is derived from which refs exist:
-- Draft ref only → `draft`
+- Draft ref only (no `Status` trailer, or `Status: draft`) → `draft`
 - Both draft + published refs → `published`
 - Draft ref with `Status: unpublished` trailer → `unpublished`
 - Draft ref with `Status: reverted` trailer → `reverted`

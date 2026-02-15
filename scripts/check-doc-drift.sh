@@ -34,7 +34,7 @@ done
 api_paths=$(grep -oE "pathname === '/api/cms/[a-z0-9_/-]+'" "$SERVER_FILE" | sed "s/pathname === '//;s/'//g" | sort -u)
 
 for ep in $api_paths; do
-  if ! grep -q "$ep" "$QUICK_REF"; then
+  if ! grep -q "\`$ep\`" "$QUICK_REF"; then
     echo "DRIFT: HTTP endpoint '$ep' missing from QUICK_REFERENCE.md"
     errors=$((errors + 1))
   fi
@@ -46,7 +46,7 @@ deleted_files=("REPO_WALKTHROUGH.md")
 
 for file in "${deleted_files[@]}"; do
   # Search all markdown files except the stub itself, QUICK_REFERENCE (documents the removal), and CHANGELOG (historical entries)
-  offenders=$(grep -rl "$file" "$ROOT"/*.md "$ROOT"/docs/*.md 2>/dev/null | grep -v "$ROOT/$file" | grep -v "$ROOT/QUICK_REFERENCE.md" | grep -v "$ROOT/CHANGELOG.md" || true)
+  offenders=$(grep -rl --include='*.md' "$file" "$ROOT" "$ROOT"/docs 2>/dev/null | grep -v "$ROOT/$file" | grep -v "$ROOT/QUICK_REFERENCE.md" | grep -v "$ROOT/CHANGELOG.md" || true)
   if [ -n "$offenders" ]; then
     echo "DRIFT: Deleted file '$file' still referenced in: $offenders"
     errors=$((errors + 1))
@@ -55,7 +55,7 @@ done
 
 # ── 4. Root GETTING_STARTED.md links from docs/ ─────────────────────────────
 # docs/ files should link to docs/GETTING_STARTED.md, not the root redirect stub
-root_gs_links=$(grep -rn '\[.*\](GETTING_STARTED.md)' "$ROOT"/docs/*.md 2>/dev/null || true)
+root_gs_links=$(grep -rnE '\[.*\]\((\.\.\/)?GETTING_STARTED\.md\)' "$ROOT"/docs/ --include='*.md' 2>/dev/null || true)
 if [ -n "$root_gs_links" ]; then
   echo "DRIFT: docs/ files link to root GETTING_STARTED.md instead of docs/GETTING_STARTED.md:"
   echo "$root_gs_links"
