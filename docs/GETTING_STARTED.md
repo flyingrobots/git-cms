@@ -1,6 +1,6 @@
 # Getting Started with Git CMS
 
-> Validated against v1.1.3 on 2026-02-14.
+> Validated against v1.1.4 on 2026-02-14.
 
 **⚠️ IMPORTANT: This project manipulates Git repositories at a low level. Always use Docker for testing to protect your local Git setup.**
 
