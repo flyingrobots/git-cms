@@ -6,6 +6,7 @@
 #   1. All CLI commands from bin/git-cms.js appear in QUICK_REFERENCE.md
 #   2. All HTTP endpoints from src/server/index.js appear in QUICK_REFERENCE.md
 #   3. Deleted file names are not referenced as active links
+#   4. docs/ files don't link to root GETTING_STARTED.md (canonical is docs/)
 #
 set -euo pipefail
 
@@ -19,10 +20,10 @@ errors=0
 
 # ── 1. CLI commands ──────────────────────────────────────────────────────────
 # Extract command names from the switch/case block in bin/git-cms.js
-cli_commands=$(grep -oE "case '([a-z-]+)'" "$CLI_FILE" | sed "s/case '//;s/'//")
+cli_commands=$(grep -oE "case '[a-z0-9_-]+'" "$CLI_FILE" | sed "s/case '//;s/'//")
 
 for cmd in $cli_commands; do
-  if ! grep -q "$cmd" "$QUICK_REF"; then
+  if ! grep -q "\`$cmd\`" "$QUICK_REF"; then
     echo "DRIFT: CLI command '$cmd' missing from QUICK_REFERENCE.md"
     errors=$((errors + 1))
   fi
@@ -30,7 +31,7 @@ done
 
 # ── 2. HTTP endpoints ───────────────────────────────────────────────────────
 # Extract API paths from src/server/index.js
-api_paths=$(grep -oE "pathname === '/api/cms/[a-z-]+'" "$SERVER_FILE" | sed "s/pathname === '//;s/'//g" | sort -u)
+api_paths=$(grep -oE "pathname === '/api/cms/[a-z0-9_/-]+'" "$SERVER_FILE" | sed "s/pathname === '//;s/'//g" | sort -u)
 
 for ep in $api_paths; do
   if ! grep -q "$ep" "$QUICK_REF"; then
@@ -52,10 +53,14 @@ for file in "${deleted_files[@]}"; do
   fi
 done
 
-# Check root GETTING_STARTED.md isn't linked from docs (except from itself)
+# ── 4. Root GETTING_STARTED.md links from docs/ ─────────────────────────────
+# docs/ files should link to docs/GETTING_STARTED.md, not the root redirect stub
 root_gs_links=$(grep -rn '\[.*\](GETTING_STARTED.md)' "$ROOT"/docs/*.md 2>/dev/null || true)
-# Also check for relative links from root-level docs pointing to root GETTING_STARTED.md
-# (but NOT links to docs/GETTING_STARTED.md, which is the canonical location)
+if [ -n "$root_gs_links" ]; then
+  echo "DRIFT: docs/ files link to root GETTING_STARTED.md instead of docs/GETTING_STARTED.md:"
+  echo "$root_gs_links"
+  errors=$((errors + 1))
+fi
 
 if [ "$errors" -gt 0 ]; then
   echo ""
