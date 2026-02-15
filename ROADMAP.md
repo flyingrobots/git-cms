@@ -147,7 +147,7 @@ INF3 (UI Redesign) ideally after M1.1
 
 ## M1 — Core Content Model + State Machine
 
-### M1.1 — Define canonical Content IDs + paths *(ADD — MUST EXIST)*
+### M1.1 — Define canonical Content IDs + paths *(complete)*
 
 - **User Story:** As a developer, I understand how content is identified and where it lives.
 - **Requirements:** Slug rules (charset, length, uniqueness); rename semantics; ref naming conventions; content ID immutability policy.
@@ -166,7 +166,7 @@ INF3 (UI Redesign) ideally after M1.1
 
 ---
 
-### M1.2 — Draft/Published state machine + transitions *(ADD — MUST EXIST)*
+### M1.2 — Draft/Published state machine + transitions *(complete)*
 
 - **User Story:** As a developer, the Draft→Published→Unpublished→Reverted states are explicit and deterministic.
 - **Requirements:** State enum; allowed transitions; revert semantics (new commit vs ref move); unpublish semantics (tombstone vs delete).
@@ -185,7 +185,7 @@ INF3 (UI Redesign) ideally after M1.1
 
 ---
 
-### M1.3 — Migration + repo layout spec *(ADD — MUST EXIST)*
+### M1.3 — Migration + repo layout spec *(complete)*
 
 - **User Story:** As a maintainer, I know where content lives and how to migrate between versions.
 - **Requirements:** Ref namespace spec; index structure; migration strategy; backward compatibility policy.
@@ -304,7 +304,7 @@ INF3 (UI Redesign) ideally after M1.1
 
 ---
 
-### CE2 — Add autosave for drafts
+### CE2 — Add autosave for drafts *(complete)*
 
 - **User Story:** As an author, my draft is never lost because I sneezed near a browser tab.
 - **Requirements:** Debounce; conflict strategy; "last saved" indicator; local vs repo save decision.
@@ -324,7 +324,7 @@ INF3 (UI Redesign) ideally after M1.1
 
 ---
 
-### CE3 — Add version history browser
+### CE3 — Add version history browser *(complete)*
 
 - **User Story:** As an editor, I can browse and diff prior versions and restore one.
 - **Requirements:** Map commits to content IDs; diff view; restore action creates new commit; permissions later.
@@ -588,6 +588,68 @@ INF3 (UI Redesign) ideally after M1.1
 - **Def of Done:** No broken layouts; basic a11y.
 - **Blocking:** Adoption
 - **Blocked By:** INF3 (UI redesign) ideally
+
+---
+
+## Backlog — Doc Tooling (Immediate Follow-up)
+
+### DOC1 — Add drift check to CI pipeline
+
+- **User Story:** As a maintainer, doc drift is caught automatically before merge — not manually after the fact.
+- **Requirements:** Wire `npm run check:docs` into pre-push hook or CI workflow; fail the build on drift.
+- **Scope:** CI config + optional git hook setup.
+- **Est. Complexity:** ~30–80 LoC
+- **Blocked By:** None
+
+---
+
+### DOC2 — Add `--fix` mode to check-doc-drift.sh
+
+- **User Story:** As a maintainer, I can auto-regenerate the CLI and HTTP API tables in QUICK_REFERENCE.md from source instead of editing them by hand.
+- **Requirements:** Parse `bin/git-cms.js` switch/case and `src/server/index.js` endpoint definitions; generate markdown tables; write them into QUICK_REFERENCE.md between sentinel comments.
+- **Scope:** Script enhancement.
+- **Est. Complexity:** ~100–300 LoC
+- **Blocked By:** None
+
+---
+
+### DOC3 — Markdown link checker
+
+- **User Story:** As a maintainer, broken internal links (`[text](path)` pointing to nonexistent files) are caught before merge.
+- **Requirements:** Walk all `.md` files; resolve relative links; report broken targets; exclude external URLs.
+- **Scope:** New script or integration with existing `check-doc-drift.sh`.
+- **Est. Complexity:** ~80–200 LoC
+- **Blocked By:** None
+
+---
+
+### DOC4 — Generate state diagram from ContentStatePolicy.js
+
+- **User Story:** As a maintainer, the state machine diagram in QUICK_REFERENCE.md stays in sync with code automatically — no manual ASCII art updates after policy changes.
+- **Requirements:** Read `TRANSITIONS` map from `ContentStatePolicy.js`; generate ASCII or Mermaid diagram; write into QUICK_REFERENCE.md between sentinel comments.
+- **Scope:** Script + sentinel markers in QUICK_REFERENCE.md.
+- **Est. Complexity:** ~100–250 LoC
+- **Blocked By:** None
+
+---
+
+### DOC5 — Add `test:docs` target for drift script regression tests
+
+- **User Story:** As a maintainer, I can verify that `check-doc-drift.sh` itself catches real drift — with intentional drift scenarios as test fixtures.
+- **Requirements:** Fixture files with missing CLI commands, missing endpoints, stale references; test harness runs drift script against fixtures and asserts expected failures.
+- **Scope:** Test fixtures + test runner script + `npm run test:docs` target.
+- **Est. Complexity:** ~80–200 LoC
+- **Blocked By:** None
+
+---
+
+### DOC6 — Port check-doc-drift.sh to JavaScript
+
+- **User Story:** As a maintainer, the doc drift checker uses the same language and test patterns as the rest of the codebase — improving maintainability and cross-platform support.
+- **Requirements:** Rewrite `check-doc-drift.sh` as a Node.js script; same checks (CLI commands, HTTP endpoints, stale references, root GS links); integrate with Vitest for testability.
+- **Scope:** New JS script replacing shell script; update `npm run check:docs`.
+- **Est. Complexity:** ~150–400 LoC
+- **Blocked By:** None (DOC5 provides regression safety net)
 
 ---
 

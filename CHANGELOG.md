@@ -2,6 +2,48 @@
 
 All notable changes to git-cms are documented in this file.
 
+## [1.1.5] — 2026-02-14
+
+### Fixed
+
+- **(Security) Git identity leakage:** Removed `git config --global` from host-level modification in CI workflow (`.github/workflows/ci.yml`). Scripts now use an isolated global config file via `GIT_CONFIG_GLOBAL` redirected to `/tmp`, preventing accidental modification of host global settings if workflows are executed locally (e.g., via `act`).
+- `QUICK_REFERENCE.md`: `revert` command description corrected — sets state to `reverted`, not `draft`
+- `QUICK_REFERENCE.md`: state machine diagram refined to accurately show `draft`→`reverted` transition
+- `QUICK_REFERENCE.md`: HTTP API table uses canonical `optional` notation and clarifies optimistic concurrency for `publish`
+- `docs/GETTING_STARTED.md`: migration walkthrough refined (separated idempotency/dry-run, clarified no-op behavior)
+- `check-doc-drift.sh`: recursive search for deleted files and root-level documentation links
+- `check-doc-drift.sh`: improved regex for CLI and API matching to prevent substring false positives and support underscores/digits
+- `QUICK_REFERENCE.md`: state derivation rule clarified — "draft ref only" requires no `Status` trailer or `Status: draft`
+- `QUICK_REFERENCE.md`: `<40-hex>` replaced with `<oid>` for hash-format-agnostic docs
+- `docs/GETTING_STARTED.md`: migration walkthrough clarifies no-dry-run vs idempotency
+- `check-doc-drift.sh`: API endpoint matching uses backtick-delimited grep (prevents substring false positives)
+- `check-doc-drift.sh`: deleted-file search recurses into docs subdirectories
+- `check-doc-drift.sh`: root GS links regex handles `../` relative path prefixes
+
+## [1.1.4] — 2026-02-14
+
+### Changed
+
+- Consolidate and update documentation for M1.1, M1.2, M1.3, CE2, and CE3
+- `QUICK_REFERENCE.md` is now the canonical reference for all 9 CLI commands, 10 HTTP API endpoints, and state machine
+- `docs/GETTING_STARTED.md` updated with version history, migration, unpublish/revert workflows
+- `README.md` updated with missing CLI commands and choose-your-path navigation
+- `ROADMAP.md` milestone statuses updated (M1.1, M1.2, M1.3, CE2, CE3 → complete)
+- Root `GETTING_STARTED.md` and `REPO_WALKTHROUGH.md` replaced with redirect stubs
+- `docs/ADR.md` file tree updated (removed `REPO_WALKTHROUGH.md`, added `CONTENT_ID_POLICY.md` and `LAYOUT_SPEC.md`)
+
+### Added
+
+- `scripts/check-doc-drift.sh` — automated doc drift detection (CLI commands, HTTP endpoints, stale references)
+- `npm run check:docs` script
+
+### Fixed
+
+- Doc freshness banners now reference v1.1.4 (was v1.1.3)
+- `check-doc-drift.sh`: CLI/API regex broadened to `[a-z0-9_-]+` for future-proofing
+- `check-doc-drift.sh`: CLI command matching uses backtick-delimited grep to prevent substring false positives
+- `check-doc-drift.sh`: `root_gs_links` check was computed but never evaluated (dead code)
+
 ## [1.1.3] — 2026-02-14
 
 ### Fixed
@@ -102,6 +144,7 @@ All notable changes to git-cms are documented in this file.
 - **(P2) walkLimit divergence:** Extracted `HISTORY_WALK_LIMIT` as a shared exported constant used by both `_validateAncestry` and the server's history limit clamp
 
 [Unreleased]: https://github.com/flyingrobots/git-cms/compare/main...git-stunts
+[1.1.4]: https://github.com/flyingrobots/git-cms/compare/v1.1.3...v1.1.4
 [1.1.3]: https://github.com/flyingrobots/git-cms/compare/v1.1.2...v1.1.3
 [1.1.2]: https://github.com/flyingrobots/git-cms/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/flyingrobots/git-cms/compare/v1.1.0...v1.1.1

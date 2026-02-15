@@ -1741,7 +1741,8 @@ git-cms/
 │   └── app.js
 ├── docs/
 │   ├── GETTING_STARTED.md
-│   ├── REPO_WALKTHROUGH.md
+│   ├── CONTENT_ID_POLICY.md
+│   ├── LAYOUT_SPEC.md
 │   └── ADR.md                  # This document
 ├── Dockerfile                  # Multi-stage build
 ├── docker-compose.yml          # Dev/test orchestration
