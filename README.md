@@ -200,6 +200,7 @@ git config remote.stargate.push "+refs/_blog/*:refs/_blog/*"
 ## Where To Go Next
 
 - **Blog companion / runnable appendix:** [docs/GIT_CMS_COMPANION.md](./docs/GIT_CMS_COMPANION.md)
+- **Media capture pipeline:** [docs/media/README.md](./docs/media/README.md)
 - **Reader walkthrough:** [docs/GETTING_STARTED.md](./docs/GETTING_STARTED.md)
 - **Command and API reference:** [QUICK_REFERENCE.md](./QUICK_REFERENCE.md)
 - **Testing and safety details:** [TESTING_GUIDE.md](./TESTING_GUIDE.md)

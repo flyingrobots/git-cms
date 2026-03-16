@@ -19,6 +19,8 @@
     "demo": "./scripts/demo.sh",
     "quickstart": "./scripts/quickstart.sh",
     "setup": "./scripts/setup.sh",
+    "capture:cms": "node ./scripts/capture-cms-footage.mjs",
+    "capture:git-cas:vhs": "./scripts/render-git-cas-vhs.sh",
     "check:deps": "node scripts/check-dependency-integrity.mjs",
     "check:docs": "./scripts/check-doc-drift.sh",
     "test": "./test/run-docker.sh",

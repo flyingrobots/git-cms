@@ -8,6 +8,7 @@ cms-upload-*/
 git-cms-test-*/
 .obsidian/
 STUNT-BLOG.md
+docs/media/generated/
 
 # LaTeX artifacts
 docs/adr-tex-2/*.aux

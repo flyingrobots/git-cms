@@ -49,6 +49,33 @@ These scripts power the long-lived reader sandbox.
 - `prepare-playground.sh` initializes a repo, configures Git identity, and seeds `hello-world` history when the playground repo is empty.
 - `start-playground.sh` prepares the repo and then starts the HTTP server against it.
 
+### `capture-cms-footage.mjs` / `start-media-sandbox.sh`
+
+These scripts power repeatable browser footage for the blog post.
+
+- `capture-cms-footage.mjs` runs a dedicated Playwright capture flow against a fresh media sandbox.
+- `start-media-sandbox.sh` starts an isolated seeded sandbox on a dedicated port and tears it down afterward.
+
+Run:
+
+```bash
+npm run capture:cms
+```
+
+Outputs land in `docs/media/generated/git-cms/`.
+
+### `render-git-cas-vhs.sh`
+
+Renders the `git-cas` terminal GIF used in the broader `Git Stunts` series media pipeline.
+
+Run:
+
+```bash
+npm run capture:git-cas:vhs
+```
+
+See: [docs/media/README.md](../docs/media/README.md)
+
 ### `bootstrap-stargate.sh` (Advanced: Git Gateway)
 
 Creates a local "Stargate" gateway repository with Git hooks that enforce:
