@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import InMemoryGraphAdapter from '#test/InMemoryGraphAdapter';
+import { InMemoryGraphAdapter } from '@git-stunts/git-warp';
 import CmsService from '../src/lib/CmsService.js';
 import { CmsValidationError } from '../src/lib/ContentIdentityPolicy.js';
 import { resolveEffectiveState } from '../src/lib/ContentStatePolicy.js';
@@ -62,6 +62,20 @@ describe('CmsService (Integration)', () => {
     expect(pubArticle.sha).toBe(sha);
   });
 
+  it('rejects publishing a stale draft sha', async () => {
+    const slug = 'pub-stale';
+    const v1 = await cms.saveSnapshot({ slug, title: 'v1', body: 'first' });
+    await cms.saveSnapshot({ slug, title: 'v2', body: 'second' });
+
+    await expect(
+      cms.publishArticle({ slug, sha: v1.sha })
+    ).rejects.toMatchObject({
+      name: 'CmsValidationError',
+      code: 'stale_draft_sha',
+      field: 'sha',
+    });
+  });
+
   it('canonicalizes mixed-case slugs and stores contentId trailer', async () => {
     await cms.saveSnapshot({ slug: 'Hello-World', title: 'Title', body: 'Body' });
 
@@ -118,6 +132,22 @@ describe('State Machine', () => {
     await cms.publishArticle({ slug: 'sm-pub' });
     const { state } = await cms.getArticleState({ slug: 'sm-pub' });
     expect(state).toBe('published');
+  });
+
+  it('published articles can accept new draft saves while published stays pinned', async () => {
+    const first = await cms.saveSnapshot({ slug: 'sm-pub-edit', title: 'v1', body: 'b1' });
+    await cms.publishArticle({ slug: 'sm-pub-edit', sha: first.sha });
+
+    const second = await cms.saveSnapshot({ slug: 'sm-pub-edit', title: 'v2', body: 'b2' });
+    const { state } = await cms.getArticleState({ slug: 'sm-pub-edit' });
+    const published = await cms.readArticle({ slug: 'sm-pub-edit', kind: 'published' });
+    const draft = await cms.readArticle({ slug: 'sm-pub-edit' });
+
+    expect(state).toBe('published');
+    expect(draft.sha).toBe(second.sha);
+    expect(published.sha).toBe(first.sha);
+    expect(draft.title).toBe('v2');
+    expect(published.title).toBe('v1');
   });
 
   it('published → unpublished deletes published ref and sets status', async () => {

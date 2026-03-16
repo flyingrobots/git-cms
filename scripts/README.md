@@ -8,10 +8,12 @@ Helper scripts for working with git-cms safely.
 
 ### `quickstart.sh` (Recommended for first-time users)
 
-Interactive menu for trying out git-cms in Docker. Checks prerequisites and guides you through:
-- Starting the HTTP server
+Interactive menu for trying out git-cms safely. Checks prerequisites and guides you through:
+- Running the guided demo
+- Starting the seeded sandbox server
+- Opening a shell in the running sandbox
 - Running tests
-- Opening a shell in the container
+- Starting contributor dev mode
 - Viewing logs
 - Cleaning up
 
@@ -23,7 +25,7 @@ Interactive menu for trying out git-cms in Docker. Checks prerequisites and guid
 
 ### `demo.sh` (See it in action)
 
-Automated demo that showcases the key features:
+Automated demo that showcases the key features against an isolated disposable repo:
 - Creating and editing articles
 - Publishing with atomic ref updates
 - Viewing Git's perspective on the data
@@ -39,6 +41,13 @@ This is great for:
 - Understanding how git-cms works before diving in
 - Recording screencasts or demos
 - Verifying the system is working correctly
+
+### `prepare-playground.sh` / `start-playground.sh`
+
+These scripts power the long-lived reader sandbox.
+
+- `prepare-playground.sh` initializes a repo, configures Git identity, and seeds `hello-world` history when the playground repo is empty.
+- `start-playground.sh` prepares the repo and then starts the HTTP server against it.
 
 ### `bootstrap-stargate.sh` (Advanced: Git Gateway)
 
@@ -61,10 +70,14 @@ See: [git-stargate](https://github.com/flyingrobots/git-stargate)
 
 ## Safety First
 
-All scripts that interact with Git are designed to run in Docker containers to protect your host system. The container provides:
-- Isolated Git environment
-- Temporary repositories
-- No risk to your existing Git repos
+Reader-facing scripts are designed to keep Git activity away from the checkout:
+- `demo.sh` uses an isolated disposable repo
+- `sandbox` uses a named Docker volume mounted at `/data/repo`
+
+Contributor `dev` mode is different:
+- it bind-mounts the checkout into `/app`
+- the running server uses `/app` as its Git repo
+- it is for working on `git-cms`, not casual exploration
 
 **Never run git-cms commands in repositories you care about until you understand what's happening.**
 

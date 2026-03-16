@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Git CMS Quick Start Script
-# Safely try out git-cms in Docker
+# Safely try out git-cms in Docker.
 
 echo "🚀 Git CMS Quick Start"
 echo "====================="
@@ -45,31 +45,57 @@ echo ""
 echo "✅ Dependency mode: npm packages (no sibling git-stunts checkout required)"
 echo ""
 
-# Offer to build or start
+# Offer safe reader-first paths before contributor workflow.
 echo "What would you like to do?"
 echo ""
-echo "  1) Start the server (builds if needed)"
-echo "  2) Run tests"
-echo "  3) Open a shell in the container"
-echo "  4) View logs"
-echo "  5) Stop and clean up"
-echo "  6) Exit"
+echo "  1) Run the guided demo (safe, ephemeral)"
+echo "  2) Start the seeded sandbox server (safe, long-lived)"
+echo "  3) Open a shell in the running sandbox"
+echo "  4) Run tests"
+echo "  5) Start contributor dev mode (uses this checkout's .git)"
+echo "  6) View sandbox logs"
+echo "  7) Stop and clean up"
+echo "  8) Exit"
 echo ""
-read -r -p "Choose [1-6]: " choice
+read -r -p "Choose [1-8]: " choice
 
 case $choice in
   1)
     echo ""
-    echo "🐳 Starting Git CMS server..."
+    echo "🎬 Running guided demo..."
     echo ""
-    echo "The server will be available at: http://localhost:4638"
+    ./scripts/demo.sh
     echo ""
-    echo "Press Ctrl+C to stop the server."
-    echo ""
-    docker compose up app
-    exit 0
+    echo "✅ Demo complete"
     ;;
   2)
+    echo ""
+    echo "🐳 Starting seeded sandbox..."
+    echo ""
+    echo "The sandbox will be available at: http://localhost:4638"
+    echo "The Git repo lives inside the container at: /data/repo"
+    echo ""
+    echo "Press Ctrl+C to stop the sandbox."
+    echo ""
+    docker compose up --build playground
+    exit 0
+    ;;
+  3)
+    echo ""
+    echo "🐚 Opening shell in the running sandbox..."
+    echo ""
+    echo "The seeded repo is available at: \$GIT_CMS_REPO"
+    echo ""
+    echo "Useful commands:"
+    echo "  git -C \"\$GIT_CMS_REPO\" for-each-ref refs/_blog/"
+    echo "  git -C \"\$GIT_CMS_REPO\" log refs/_blog/dev/articles/hello-world --graph --oneline"
+    echo "  node bin/git-cms.js show hello-world"
+    echo ""
+    echo "Type 'exit' to leave the shell."
+    echo ""
+    docker compose exec playground sh
+    ;;
+  4)
     echo ""
     echo "🧪 Running tests in Docker..."
     echo ""
@@ -77,26 +103,25 @@ case $choice in
     echo ""
     echo "✅ Tests complete!"
     ;;
-  3)
+  5)
     echo ""
-    echo "🐚 Opening shell in container..."
+    echo "🛠️  Starting contributor dev mode..."
     echo ""
-    echo "You can now run commands like:"
-    echo "  node bin/git-cms.js draft hello-world \"My First Post\""
-    echo "  git log --all --oneline --graph"
+    echo "This mode uses the checkout mounted at /app as the Git repo."
+    echo "Use it when you are working on git-cms itself, not when you are just exploring the stunt."
     echo ""
-    echo "Type 'exit' to leave the shell."
+    echo "Press Ctrl+C to stop the server."
     echo ""
-    docker compose run --rm app sh
-    ;;
-  4)
-    echo ""
-    echo "📋 Viewing logs..."
-    echo ""
-    docker compose logs -f app
+    docker compose up app
     exit 0
     ;;
-  5)
+  6)
+    echo ""
+    echo "📋 Viewing sandbox logs..."
+    echo ""
+    docker compose logs -f playground
+    ;;
+  7)
     echo ""
     echo "🧹 Stopping and cleaning up..."
     echo ""
@@ -104,7 +129,7 @@ case $choice in
     echo ""
     echo "✅ All containers and volumes removed"
     ;;
-  6)
+  8)
     echo ""
     echo "👋 Goodbye!"
     exit 0

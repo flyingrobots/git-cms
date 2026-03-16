@@ -1,8 +1,8 @@
 import http from 'node:http';
-import url from 'node:url';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
+import { fileURLToPath } from 'node:url';
 import CmsService, { HISTORY_WALK_LIMIT } from '../lib/CmsService.js';
 import {
   CmsValidationError,
@@ -10,7 +10,7 @@ import {
   canonicalizeSlug,
 } from '../lib/ContentIdentityPolicy.js';
 
-const __dirname = path.dirname(new URL(import.meta.url).pathname);
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 4638;
 const CWD = process.env.GIT_CMS_REPO || process.cwd();
 const ENV = (process.env.GIT_CMS_ENV || 'dev').toLowerCase();
@@ -88,7 +88,7 @@ function sendError(res, err) {
 }
 
 const MAX_BODY_BYTES = 1_048_576; // 1 MB
-const SHA_RE = /^[0-9a-f]{40}$/;
+const SHA_RE = /^[0-9a-f]{40}$/; // default Git SHA-1 object format
 
 function readBody(req, limit = MAX_BODY_BYTES) {
   return new Promise((resolve, reject) => {
@@ -115,8 +115,9 @@ function logError(err) {
 }
 
 async function handler(req, res) {
-  const parsed = url.parse(req.url, true);
-  const { pathname, query } = parsed;
+  const requestUrl = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
+  const pathname = requestUrl.pathname;
+  const query = Object.fromEntries(requestUrl.searchParams.entries());
 
   console.log(`[${new Date().toISOString()}] ${req.method} ${pathname}`);
 
@@ -226,7 +227,7 @@ async function handler(req, res) {
         try {
           const { slug: rawSlug, sha } = query;
           if (!rawSlug || !sha) return send(res, 400, { error: 'slug and sha required' });
-          if (!SHA_RE.test(sha)) return send(res, 400, { error: 'sha must be a 40-character hex string' });
+          if (!SHA_RE.test(sha)) return send(res, 400, { error: 'sha must be a 40-character hex string (default SHA-1 commit ID)' });
           const slug = canonicalizeSlug(rawSlug);
           const result = await cms.readVersion({ slug, sha });
           // Cap response body at 1MB (byte-accurate truncation)
@@ -247,7 +248,7 @@ async function handler(req, res) {
           const body = await readBody(req);
           const { slug: rawSlug, sha } = JSON.parse(body || '{}');
           if (!rawSlug || !sha) return send(res, 400, { error: 'slug and sha required' });
-          if (!SHA_RE.test(sha)) return send(res, 400, { error: 'sha must be a 40-character hex string' });
+          if (!SHA_RE.test(sha)) return send(res, 400, { error: 'sha must be a 40-character hex string (default SHA-1 commit ID)' });
           const slug = canonicalizeSlug(rawSlug);
           const result = await cms.restoreVersion({ slug, sha });
           return send(res, 200, result);
@@ -274,7 +275,7 @@ async function handler(req, res) {
           const filePath = path.join(tmpDir, safeFilename);
           fs.writeFileSync(filePath, Buffer.from(data, 'base64'));
 
-          const result = await cms.uploadAsset({ slug, filePath, filename });
+          const result = await cms.uploadAsset({ slug, filePath, filename: safeFilename });
           const firstChunk = result.manifest?.chunks?.[0];
           if (!firstChunk?.digest) {
             throw new Error('Upload manifest contains no chunks');

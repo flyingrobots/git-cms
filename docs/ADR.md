@@ -33,10 +33,10 @@ The publish operation MUST enforce strict linear history (fast-forward only) to 
 
 **Rationale:** Guarantees provenance and prevents content manipulation after publication.
 
-#### FR-4: Client-Side Encryption
-All uploaded assets MUST be encrypted client-side (AES-256-GCM) before touching the repository.
+#### FR-4: Server-Side Asset Encryption
+Uploaded assets MAY be encrypted server-side (AES-256-GCM via `git-cas`) before being written into the repository object store.
 
-**Rationale:** Achieves row-level security without database-level access controls. The Git gateway receives only opaque encrypted blobs.
+**Rationale:** Keeps the Git gateway blind to plaintext assets when encryption is enabled, without requiring whole-repo encryption.
 
 #### FR-5: Infinite Point-in-Time Recovery
 Users MUST be able to access any historical version of any article without data loss.
@@ -47,7 +47,7 @@ Users MUST be able to access any historical version of any article without data 
 
 | Priority | Quality Attribute | Description | Measurement |
 |----------|------------------|-------------|-------------|
-| 1 | **Security** | Cryptographic integrity, client-side encryption, signed commits | GPG verification, AES-256-GCM encryption strength |
+| 1 | **Security** | Cryptographic integrity, optional asset encryption, signed commits | GPG verification, AES-256-GCM encryption strength |
 | 2 | **Simplicity** | Minimal dependencies, no database, composable architecture | Lines of code, dependency count, Docker image size |
 | 3 | **Auditability** | Complete provenance of all content changes | Git log completeness, trailer metadata coverage |
 | 4 | **Performance** | Sub-second reads for typical blog workloads | Response time for `readArticle()` |
@@ -260,11 +260,11 @@ Each draft save creates a new commit. The "current" article is the ref's tip, bu
 #### D-3: Why Encrypt Assets, Not Entire Repos?
 **Alternative:** Use `git-crypt` to encrypt the entire repository.
 
-**Decision:** Encrypt individual assets client-side.
+**Decision:** Encrypt individual assets server-side before Git storage.
 
 **Rationale:**
 - `git-crypt` requires shared keys across all collaborators.
-- Client-side encryption enables row-level access control (different keys for different assets).
+- Per-asset encryption still enables narrow access control without whole-repo encryption.
 - The gateway (git-stargate) never sees plaintext.
 
 ---
@@ -418,7 +418,7 @@ Output:
 
 ---
 
-#### Module 3: `@git-stunts/git-warp` (v10.4.2)
+#### Module 3: `@git-stunts/git-warp` (v14.0.0)
 **Purpose:** Graph database primitive using commits on empty trees.
 
 **Public API:**
@@ -448,7 +448,7 @@ async commitNode({ message, parents = [], sign = false }) {
 
 ---
 
-#### Module 4: `@git-stunts/git-cas` (v3.0.0)
+#### Module 4: `@git-stunts/git-cas` (v5.3.0)
 **Purpose:** Content-Addressable Store for large files.
 
 **Public API:**
@@ -885,7 +885,7 @@ graph TB
         TestRunner --> TempRepos
     end
 
-    DevMachine -->|docker compose up app| NodeApp
+    DevMachine -->|docker compose up playground| NodeApp
     Browser -->|HTTP:4638| NodeApp
     DevMachine -->|docker compose run test| TestRunner
 
@@ -926,18 +926,20 @@ graph TB
 ```
 
 ```dockerfile
-# Base: Node 22 + Git + native build toolchain
+# Base: Node 22 + Git
 FROM node:22-slim AS base
-RUN apt-get update && apt-get install -y git python3 make g++
+RUN apt-get update && apt-get install -y git
 
 # Deps: Install dependencies
 FROM base AS deps
+RUN apt-get update && apt-get install -y python3 make g++
 COPY package.json package-lock.json* ./
 RUN npm ci
 
 # Dev: Development server
 FROM base AS dev
 ENV NODE_ENV=development
+RUN apt-get update && apt-get install -y python3 make g++
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN git config --global user.email "dev@git-cms.local"
@@ -953,13 +955,14 @@ CMD ["npm", "run", "test:local"]
 
 **Deployment Steps:**
 ```bash
-docker compose up app    # Start dev server on http://localhost:4638
+docker compose up playground    # Start isolated seeded playground on http://localhost:4638
+docker compose up app           # Start contributor dev server against the checkout repo
 docker compose run --rm test  # Run tests in isolated container
 ```
 
 **Why Docker?**
 - Ensures consistent Git version across dev/test/prod.
-- Protects host filesystem from destructive Git operations.
+- Reader paths protect the checkout repo by keeping runtime Git state out of the workspace.
 - Simplifies CI/CD (just `docker compose run --rm test`).
 
 ---

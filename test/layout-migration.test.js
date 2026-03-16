@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import InMemoryGraphAdapter from '#test/InMemoryGraphAdapter';
+import { InMemoryGraphAdapter } from '@git-stunts/git-warp';
 import {
   CURRENT_LAYOUT_VERSION,
   LAYOUT_VERSION_KEY,

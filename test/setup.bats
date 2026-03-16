@@ -147,6 +147,7 @@ EOF
   run bash scripts/setup.sh
   [ "$status" -eq 0 ]
   [[ "$output" =~ "npm run demo" ]]
+  [[ "$output" =~ "npm run playground" ]]
   [[ "$output" =~ "npm run quickstart" ]]
   [[ "$output" =~ "npm run dev" ]]
 }

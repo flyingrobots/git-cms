@@ -7,8 +7,14 @@
     "git-cms": "./bin/git-cms.js"
   },
   "scripts": {
-    "serve": "node bin/git-cms.js serve",
+    "serve": "node ./scripts/run-node-with-disabled-warning.mjs node bin/git-cms.js serve",
     "dev": "docker compose up app",
+    "sandbox": "docker compose up --build playground",
+    "sandbox:shell": "docker compose exec playground sh",
+    "sandbox:logs": "docker compose logs -f playground",
+    "playground": "docker compose up --build playground",
+    "playground:shell": "docker compose exec playground sh",
+    "playground:logs": "docker compose logs -f playground",
     "demo": "./scripts/demo.sh",
     "quickstart": "./scripts/quickstart.sh",
     "setup": "./scripts/setup.sh",
@@ -16,9 +22,11 @@
     "check:docs": "./scripts/check-doc-drift.sh",
     "test": "./test/run-docker.sh",
     "test:setup": "./test/run-setup-tests.sh",
-    "test:local": "vitest run",
-    "test:e2e": "playwright test",
-    "test:git-e2e": "vitest run --config vitest.e2e.config.js test/git-e2e.test.js"
+    "test:sandbox": "./test/playground-smoke.sh",
+    "test:playground": "./test/playground-smoke.sh",
+    "test:local": "node ./scripts/run-node-with-disabled-warning.mjs node ./node_modules/vitest/vitest.mjs run",
+    "test:e2e": "node ./scripts/run-node-with-disabled-warning.mjs node ./node_modules/@playwright/test/cli.js test",
+    "test:git-e2e": "node ./scripts/run-node-with-disabled-warning.mjs node ./node_modules/vitest/vitest.mjs run --config vitest.e2e.config.js test/git-e2e.test.js"
   },
   "author": "James Ross <james@flyingrobots.dev>",
   "license": "Apache-2.0",
@@ -29,11 +37,21 @@
   "dependencies": {
     "@git-stunts/alfred": "^0.10.3",
     "@git-stunts/docker-guard": "^0.1.0",
-    "@git-stunts/git-cas": "^3.0.0",
-    "@git-stunts/git-warp": "^10.8.0",
+    "@git-stunts/git-cas": "^5.3.1",
+    "@git-stunts/git-warp": "^14.0.0",
     "@git-stunts/plumbing": "^2.8.0",
     "@git-stunts/trailer-codec": "^2.1.1",
     "@git-stunts/vault": "^1.0.0"
+  },
+  "overrides": {
+    "@git-stunts/git-warp": {
+      "@git-stunts/git-cas": "5.3.1"
+    }
+  },
+  "pnpm": {
+    "overrides": {
+      "@git-stunts/git-warp>@git-stunts/git-cas": "5.3.1"
+    }
   },
   "devDependencies": {
     "@playwright/test": "^1.57.0",

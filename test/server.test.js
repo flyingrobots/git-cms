@@ -357,4 +357,31 @@ describe('Server API (Integration)', () => {
     expect(res.status).toBe(400);
     expect(data.code).toBe('invalid_state_transition');
   });
+
+  it('returns 400 when publish sha is stale', async () => {
+    const snap1 = await fetch(`${baseUrl}/api/cms/snapshot`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slug: 'srv-stale-publish', title: 'v1', body: 'first' }),
+    });
+    expect(snap1.status).toBe(200);
+    const v1 = await snap1.json();
+
+    const snap2 = await fetch(`${baseUrl}/api/cms/snapshot`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slug: 'srv-stale-publish', title: 'v2', body: 'second' }),
+    });
+    expect(snap2.status).toBe(200);
+
+    const res = await fetch(`${baseUrl}/api/cms/publish`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slug: 'srv-stale-publish', sha: v1.sha }),
+    });
+    const data = await res.json();
+    expect(res.status).toBe(400);
+    expect(data.code).toBe('stale_draft_sha');
+    expect(data.field).toBe('sha');
+  });
 });

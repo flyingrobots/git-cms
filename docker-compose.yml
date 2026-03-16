@@ -11,15 +11,35 @@ services:
       - .:/app
       - /app/node_modules
     ports:
-      - "4638:4638"
+      - "${APP_PORT:-4638}:4638"
     environment:
       - PORT=4638
       - GIT_CMS_ENV=dev
+      - GIT_CMS_REPO=/app
       - GIT_AUTHOR_NAME=Git CMS Dev
       - GIT_AUTHOR_EMAIL=dev@git-cms.local
       - GIT_COMMITTER_NAME=Git CMS Dev
       - GIT_COMMITTER_EMAIL=dev@git-cms.local
     command: npm run serve
+
+  playground:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: dev
+    ports:
+      - "${PLAYGROUND_PORT:-4638}:4638"
+    volumes:
+      - git-cms-playground-repo:/data/repo
+    environment:
+      - PORT=4638
+      - GIT_CMS_ENV=dev
+      - GIT_CMS_REPO=/data/repo
+      - GIT_AUTHOR_NAME=Git CMS Playground
+      - GIT_AUTHOR_EMAIL=playground@git-cms.local
+      - GIT_COMMITTER_NAME=Git CMS Playground
+      - GIT_COMMITTER_EMAIL=playground@git-cms.local
+    command: ./scripts/start-playground.sh
 
   test:
     build:
@@ -36,3 +56,6 @@ services:
       - GIT_COMMITTER_NAME=Git CMS Bot
       - GIT_COMMITTER_EMAIL=bot@git-cms.local
     command: npm run test:local
+
+volumes:
+  git-cms-playground-repo:

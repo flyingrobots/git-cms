@@ -187,7 +187,8 @@ export default class CmsService {
     // Guard: validate state transition if article already exists
     if (parentSha) {
       const { effectiveState } = await this._resolveArticleState(identity.slug);
-      validateTransition(effectiveState, STATES.DRAFT);
+      const targetState = effectiveState === STATES.PUBLISHED ? STATES.PUBLISHED : STATES.DRAFT;
+      validateTransition(effectiveState, targetState);
     }
 
     const finalTrailers = {
@@ -215,9 +216,20 @@ export default class CmsService {
     const canonicalSlug = canonicalizeSlug(slug);
     const draftRef = this._refFor(canonicalSlug, 'articles');
     const pubRef = this._refFor(canonicalSlug, 'published');
-
-    const targetSha = sha || await this.graph.readRef(draftRef);
-    if (!targetSha) throw new Error(`Nothing to publish for ${canonicalSlug}`);
+    const draftSha = await this.graph.readRef(draftRef);
+    if (!draftSha) {
+      throw new CmsValidationError(
+        `Cannot publish "${canonicalSlug}": no draft ref exists`,
+        { code: 'no_draft', field: 'slug' }
+      );
+    }
+    if (sha && sha !== draftSha) {
+      throw new CmsValidationError(
+        `Draft tip advanced for "${canonicalSlug}": expected ${sha}, found ${draftSha}`,
+        { code: 'stale_draft_sha', field: 'sha' }
+      );
+    }
+    const targetSha = draftSha;
 
     // Guard: validate state transition
     const { effectiveState, pubSha } = await this._resolveArticleState(canonicalSlug);

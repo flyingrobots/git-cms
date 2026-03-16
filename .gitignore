@@ -7,6 +7,7 @@ cms-chunks-*/
 cms-upload-*/
 git-cms-test-*/
 .obsidian/
+STUNT-BLOG.md
 
 # LaTeX artifacts
 docs/adr-tex-2/*.aux

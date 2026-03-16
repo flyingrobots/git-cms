@@ -1,6 +1,6 @@
 # Git CMS Quick Reference
 
-> Validated against v1.1.5 on 2026-02-14.
+> Validated against v1.1.5 on 2026-03-15.
 
 One-page cheat sheet for Git CMS commands, API endpoints, and concepts.
 
@@ -13,6 +13,7 @@ git clone https://github.com/flyingrobots/git-cms.git
 cd git-cms
 npm run setup  # Validate Docker prerequisites
 npm run demo   # Watch a guided walkthrough
+npm run sandbox
 ```
 
 ---
@@ -22,14 +23,28 @@ npm run demo   # Watch a guided walkthrough
 | Command | Purpose |
 |---------|---------|
 | `npm run setup` | One-time environment validation |
-| `npm run demo` | Guided CLI + Git walkthrough |
+| `npm run demo` | Guided CLI + Git walkthrough in a disposable isolated repo |
+| `npm run sandbox` | Start the seeded long-lived sandbox server on port 4638 |
+| `npm run sandbox:shell` | Open a shell in the running sandbox container |
+| `npm run sandbox:logs` | Tail sandbox logs |
+| `npm run playground` | Compatibility alias for `npm run sandbox` |
+| `npm run playground:shell` | Compatibility alias for `npm run sandbox:shell` |
+| `npm run playground:logs` | Compatibility alias for `npm run sandbox:logs` |
 | `npm run quickstart` | Interactive Docker menu |
-| `npm run dev` | Start HTTP server ([http://localhost:4638](http://localhost:4638)) |
+| `npm run dev` | Contributor server ([http://localhost:4638](http://localhost:4638)); uses the checkout as the repo |
 | `npm run serve` | Start server directly with Node |
 | `npm test` | Run integration tests in Docker |
 | `npm run test:setup` | Run setup-script tests (BATS) |
+| `npm run test:sandbox` | Smoke-test the seeded reader sandbox on the host |
+| `npm run test:playground` | Compatibility alias for `npm run test:sandbox` |
 | `npm run test:local` | Run Vitest directly on host (advanced) |
 | `npm run check:docs` | Check documentation drift against source code |
+
+Mode summary:
+
+- `demo` = reader-safe, guided, ephemeral
+- `sandbox` = reader-safe, long-lived, seeded, inspectable
+- `dev` = contributor workflow, uses `/app` as the runtime repo
 
 ---
 
@@ -40,7 +55,7 @@ All 9 commands available via `node bin/git-cms.js <command>` or `git cms <comman
 | Command | Usage | Description |
 |---------|-------|-------------|
 | `draft` | `echo "body" \| git cms draft <slug> "Title"` | Create or update a draft (reads body from stdin) |
-| `publish` | `git cms publish <slug>` | Fast-forward published ref to match draft |
+| `publish` | `git cms publish <slug>` | Move published ref to the current draft tip |
 | `unpublish` | `git cms unpublish <slug>` | Remove from published, keep as unpublished draft |
 | `revert` | `git cms revert <slug>` | Move article to 'reverted' state (creates new draft commit with `Status: reverted` trailer) |
 | `list` | `git cms list` | List all draft articles |
@@ -50,8 +65,8 @@ All 9 commands available via `node bin/git-cms.js <command>` or `git cms <comman
 | `layout-version` | `git cms layout-version` | Print repo and codebase layout versions |
 
 ```bash
-# Enter container
-docker compose run --rm app sh
+# Enter the live sandbox container
+npm run sandbox:shell
 
 # Draft an article (reads body from stdin)
 echo "# My Post" | node bin/git-cms.js draft my-slug "My Title"
@@ -79,9 +94,6 @@ node bin/git-cms.js layout-version
 
 # Run pending migrations
 node bin/git-cms.js migrate
-
-# Exit container
-exit
 ```
 
 `node bin/git-cms.js list` does not support `--kind`. Kind filtering is available in the HTTP API (`GET /api/cms/list?kind=published`).
@@ -97,13 +109,15 @@ All endpoints are served by `git cms serve` (default port 4638). Slugs are NFKC-
 | `GET` | `/api/cms/list` | `?kind=articles\|published` | List articles by kind |
 | `GET` | `/api/cms/show` | `?slug=xxx&kind=articles` | Read article content |
 | `POST` | `/api/cms/snapshot` | `{ slug, title, body, trailers (optional) }` | Create or update a draft |
-| `POST` | `/api/cms/publish` | `{ slug, sha (optional) }` | Publish a draft (omitting `sha` uses optimistic concurrency) |
+| `POST` | `/api/cms/publish` | `{ slug, sha (optional) }` | Publish current draft tip (`sha` acts as optimistic-concurrency token if supplied) |
 | `POST` | `/api/cms/unpublish` | `{ slug }` | Unpublish an article |
 | `POST` | `/api/cms/revert` | `{ slug }` | Revert to draft state |
 | `GET` | `/api/cms/history` | `?slug=xxx&limit=50` | List version history (max 200) |
 | `GET` | `/api/cms/show-version` | `?slug=xxx&sha=<oid>` | Read a specific historical version |
 | `POST` | `/api/cms/restore` | `{ slug, sha }` | Restore a historical version as new draft |
-| `POST` | `/api/cms/upload` | `{ slug, filename, data }` | Upload base64-encoded asset (encrypted) |
+| `POST` | `/api/cms/upload` | `{ slug, filename, data }` | Upload base64-encoded asset (optionally encrypted server-side) |
+
+Historical version endpoints currently assume Git's default SHA-1 object format and therefore validate 40-character hexadecimal commit IDs.
 
 ---
 
@@ -170,7 +184,7 @@ The trick: content lives in commit messages while commits point at the repo's em
 | Ref Pattern | Purpose |
 |-------------|---------|
 | `{refPrefix}/articles/{slug}` | Draft pointer (moves on every save) |
-| `{refPrefix}/published/{slug}` | Published pointer (fast-forward only) |
+| `{refPrefix}/published/{slug}` | Published pointer to the current draft tip |
 | `{refPrefix}/chunks/{slug}@current` | Current asset-manifest pointer |
 
 ---
@@ -235,7 +249,9 @@ Trailers are parsed by `@git-stunts/trailer-codec`.
 | `test/chunks.test.js` | Asset encryption and chunking |
 | `test/server.test.js` | HTTP API endpoints, validation, error responses |
 | `test/git-e2e.test.js` | Real-git smoke tests (subprocess forks) |
+| `test/playground-bootstrap.test.js` | Seed/bootstrap behavior and `GIT_CMS_REPO` CLI routing |
 | `test/setup.bats` | Setup script tests (BATS) |
+| `test/playground-smoke.sh` | Host-side container smoke test for the seeded sandbox |
 | `test/run-docker.sh` | Docker test harness |
 
 ---
@@ -252,11 +268,10 @@ npm ci
 
 ### Port 4638 already in use
 
-Edit `docker-compose.yml`:
+Override the published port when starting the sandbox:
 
-```yaml
-ports:
-  - "5000:4638"
+```bash
+PLAYGROUND_PORT=5000 npm run sandbox
 ```
 
 ### Docker daemon not running

@@ -8,7 +8,7 @@ const DEFAULT_REF_PREFIX = 'refs/_blog/dev';
 
 async function main() {
   const [,, cmd, ...args] = process.argv;
-  const cwd = process.cwd();
+  const cwd = process.env.GIT_CMS_REPO || process.cwd();
   const refPrefix = process.env.CMS_REF_PREFIX || DEFAULT_REF_PREFIX;
 
   try {

@@ -6,154 +6,201 @@ A serverless, database-free CMS built on Git plumbing.
 
 > "I'm using `git push` as my API endpoint."
 
-**git-cms** treats your Git repository as a distributed, cryptographically verifiable database. Instead of files, it stores content as commit messages on "empty trees," creating a linear, append-only ledger for articles, comments, or any other structured data.
+`git-cms` treats Git as an application substrate, not just a version-control tool. Articles live in commit messages, drafts and published state live in refs, and history falls out of the storage model instead of being layered on afterward.
 
-## Quick Start (Docker - Safe!)
+Full article: [Git as CMS](https://flyingrobots.dev/git-stunts/git-cms)
 
-### One-Time Setup
+## If You Came Here From The Blog Post
+
+Use the reader-safe path first:
 
 ```bash
-# Clone this repo
 git clone https://github.com/flyingrobots/git-cms.git
 cd git-cms
+npm run setup
+npm run demo
+npm run sandbox
+```
 
-# Run setup (checks Docker + validates environment)
+Then, in a second terminal:
+
+```bash
+npm run sandbox:shell
+
+# The live Git repo is at $GIT_CMS_REPO
+git -C "$GIT_CMS_REPO" for-each-ref refs/_blog/
+git -C "$GIT_CMS_REPO" log refs/_blog/dev/articles/hello-world -1 --format="%B"
+git -C "$GIT_CMS_REPO" log refs/_blog/dev/articles/hello-world -1 --format="tree: %T"
+git -C "$GIT_CMS_REPO" log refs/_blog/dev/articles/hello-world --graph --oneline
+```
+
+Open [http://localhost:4638](http://localhost:4638) while `npm run sandbox` is running.
+
+If you want the runnable appendix rather than the essay, use the companion doc:
+
+- [docs/GIT_CMS_COMPANION.md](./docs/GIT_CMS_COMPANION.md)
+
+## Runtime Modes
+
+| Mode | Command | Repo Location | Best For |
+| --- | --- | --- | --- |
+| Guided demo | `npm run demo` | Disposable isolated repo inside a temporary Docker project | First contact, screencasts, fast payoff |
+| Reader sandbox | `npm run sandbox` | `/data/repo` inside the container, backed by a named Docker volume | Blog readers, live tinkering, inspecting seeded history |
+| Contributor dev | `npm run dev` | `/app` (the bind-mounted checkout itself) | Working on `git-cms` code |
+
+Important distinction:
+
+- `demo` and `sandbox` are the safe reader paths.
+- `dev` is a contributor path. It intentionally uses the checkout as the Git repo.
+
+Compatibility aliases:
+
+- `npm run playground`
+- `npm run playground:shell`
+- `npm run playground:logs`
+
+## Why This Repo Exists
+
+The core stunt is narrow:
+
+- drafts are commits
+- article bodies live in commit messages
+- published state is another ref
+- publish is pointer movement
+- restore writes a new commit from old content
+- history is the storage model
+
+The admin UI exists to prove the model is usable. It is not the point of the project.
+
+## Quick Start
+
+### 1. One-time setup
+
+```bash
 npm run setup
 ```
 
-### Try It Out
+This checks Docker and Docker Compose. No sibling `git-stunts` checkout is required.
+
+### 2. Watch the guided demo
 
 ```bash
-# Option 1: Guided walkthrough of key features
 npm run demo
-
-# Option 2: Interactive menu (start server, run tests, open shell)
-npm run quickstart
-
-# Option 3: Just start the server
-npm run dev
-# Open http://localhost:4638
 ```
 
-**Everything runs in Docker - completely safe for your local Git setup.**
+The demo creates a disposable isolated repo, walks through draft creation, publish, and history, then cleans itself up.
 
-## ⚠️ SAFETY WARNING
+### 3. Start the live sandbox
 
-**This project manipulates Git repositories at a low level. ALWAYS use Docker for testing.**
+```bash
+npm run sandbox
+```
 
-The tests create, destroy, and manipulate Git repositories. Running low-level plumbing commands on your host filesystem is risky - a typo could affect your local Git setup. That's why we built Docker isolation into everything.
+This starts the HTTP server on port `4638` against an isolated seeded repo. The seeded state includes:
 
-**Read more:** [TESTING_GUIDE.md](./TESTING_GUIDE.md) | [docs/GETTING_STARTED.md](./docs/GETTING_STARTED.md) | [QUICK_REFERENCE.md](./QUICK_REFERENCE.md) | [docs/CONTENT_ID_POLICY.md](./docs/CONTENT_ID_POLICY.md)
+- `hello-world` published at v1
+- two later draft commits ahead of published
+- enough history to make restore interesting immediately
 
-## Features
+### 4. Inspect the seeded repo
 
-- **Database-Free:** No SQL, No NoSQL. Just Git objects (Merkle DAG).
-- **Fast-Forward Only:** Enforces strict linear history for provenance.
-- **Atomic Publishes:** "Publishing" is just a pointer update (CAS).
-- **Infinite History:** Every draft save is a commit. Scrub back to any point in time.
+```bash
+npm run sandbox:shell
 
-## Development
+git -C "$GIT_CMS_REPO" for-each-ref refs/_blog/
+git -C "$GIT_CMS_REPO" log refs/_blog/dev/articles/hello-world -1 --format="%B"
+git -C "$GIT_CMS_REPO" log refs/_blog/dev/articles/hello-world -1 --format="tree: %T"
+git -C "$GIT_CMS_REPO" log refs/_blog/dev/articles/hello-world --graph --oneline
+```
 
-### Start the Server (Dev Mode)
+## What You Should Notice
+
+- The article content is stored in the commit message.
+- The commit points at the empty tree.
+- Publishing moves `refs/_blog/dev/published/<slug>` to the current draft tip.
+- Restoring an old version creates a new commit instead of rewriting history.
+
+## Safety Notes
+
+The reader-safe commands are safe because they do **not** use the checkout as the runtime repo:
+
+- `npm run demo` uses an isolated disposable repo
+- `npm run sandbox` uses `/data/repo` in a Docker volume
+- `npm test` runs tests in Docker against temporary repos
+
+Contributor `dev` mode is different:
+
+- `npm run dev` bind-mounts the checkout into `/app`
+- the running app uses `/app` as its Git repo
+- it is meant for hacking on `git-cms`, not for casual exploration
+
+If you are here because of the article, start with `demo` or `sandbox`, not `dev`.
+
+## Feature Snapshot
+
+- **Database-free:** No SQL, no NoSQL, just Git objects and refs
+- **Fast-forward publish semantics:** Published refs only move to the current draft tip
+- **Atomic publishes:** Publish is a CAS-protected ref update
+- **Infinite history:** Every draft save is a commit
+- **Optional asset encryption:** Assets can be encrypted server-side via `@git-stunts/git-cas`
+
+## Contributor Workflow
+
+If you are working on the codebase itself:
+
 ```bash
 npm run dev
-# OR
-docker compose up app
-```
-The API and Admin UI will be available at `http://localhost:4638`.
-
-### Run Tests
-```bash
 npm test
-# OR
-docker compose run --rm test
+npm run test:e2e
+npm run test:sandbox
 ```
 
-## Installation
+There is also a contributor devcontainer in [.devcontainer/devcontainer.json](./.devcontainer/devcontainer.json).
+
+## CLI And API Notes
+
+### Publish semantics
+
+Publishing moves the published ref to the current draft tip. If a caller supplies `sha`, it must match the current draft ref, so the parameter acts as an optimistic-concurrency token rather than an arbitrary publish target.
+
+### Attachments
+
+Attachments are optionally **encrypted server-side** (AES-256-GCM via `@git-stunts/git-cas`) before they are committed to the repository.
+
+- The browser uploads base64-encoded file data to the server.
+- The server resolves an encryption key from `CHUNK_ENC_KEY` or the local vault integration.
+- Git receives opaque encrypted blobs when encryption is enabled.
+
+### Commit ID scope
+
+The current prototype assumes Git's default SHA-1 object format for HTTP endpoints that accept historical commit IDs. In practice, `/api/cms/show-version` and `/api/cms/restore` currently validate 40-character hexadecimal commit IDs.
+
+## Optional Hardening: git-stargate
+
+If you want a Git-native gateway around `git-cms`, pair it with **[git-stargate](https://github.com/flyingrobots/git-stargate)**.
+
+Stargate can enforce:
+
+- fast-forward-only pushes
+- signed commits
+- mirroring to public remotes
+
+Local bootstrap example:
 
 ```bash
-# From source (recommended until npm publish):
-git clone https://github.com/flyingrobots/git-cms.git
-cd git-cms
-npm link
-
-# After publish, global install will work:
-# npm install -g git-cms
-```
-
-## Usage
-
-### 1. Initialize a "Stargate" (The Gateway)
-
-To use `git-cms` securely, you should pair it with **[git-stargate](https://github.com/flyingrobots/git-stargate)**.
-
-Stargate is a minimal, bash-based Git gateway that enforces:
-- **Fast-Forward Only:** No force pushes allowed.
-- **Signed Commits:** Every update must be cryptographically signed by an authorized key.
-- **Mirroring:** Validated updates are automatically mirrored to public repositories (like GitHub).
-
-```bash
-# Bootstrap a local stargate for testing
 ./scripts/bootstrap-stargate.sh ~/git/_blog-stargate.git
-
-# Link it
 git remote add stargate ~/git/_blog-stargate.git
 git config remote.stargate.push "+refs/_blog/*:refs/_blog/*"
 ```
 
-### 2. Encryption & Attachments
+## Where To Go Next
 
-Attachments are **encrypted client-side** (AES-256-GCM) before they are ever committed to the repository. 
-
-- Keys are managed securely via your OS Keychain (macOS/Linux/Windows).
-- The "Stargate" receives only opaque, encrypted blobs.
-- This effectively gives you "Row Level Security" on a file system—only users with the key can decrypt the assets.
-
-### 3. Write a Draft
-Content is stored in `refs/_blog/articles/<slug>`.
-
-```bash
-echo "# Hello World" | git cms draft hello-world "My First Post"
-```
-
-### 4. List Articles
-```bash
-git cms list
-# -> refs/_blog/articles/hello-world My First Post
-```
-
-### 5. Publish
-Publishing fast-forwards `refs/_blog/published/<slug>` to match the draft.
-
-```bash
-git cms publish hello-world
-```
-
-### 6. Unpublish / Revert
-
-```bash
-# Remove from published, keep as unpublished draft
-git cms unpublish hello-world
-
-# Revert to draft state
-git cms revert hello-world
-```
-
-### 7. Layout Version / Migrate
-
-```bash
-# Check repo vs codebase layout version
-git cms layout-version
-
-# Run pending layout migrations (forward-only, idempotent)
-git cms migrate
-```
-
-## Where to Go Next
-
-- **New user?** Start with [`docs/GETTING_STARTED.md`](./docs/GETTING_STARTED.md)
-- **Operator / API user?** See [`QUICK_REFERENCE.md`](./QUICK_REFERENCE.md) for all CLI commands and HTTP endpoints
-- **Architecture / rationale?** Read [`docs/ADR.md`](./docs/ADR.md) and [`docs/LAYOUT_SPEC.md`](./docs/LAYOUT_SPEC.md)
+- **Blog companion / runnable appendix:** [docs/GIT_CMS_COMPANION.md](./docs/GIT_CMS_COMPANION.md)
+- **Reader walkthrough:** [docs/GETTING_STARTED.md](./docs/GETTING_STARTED.md)
+- **Command and API reference:** [QUICK_REFERENCE.md](./QUICK_REFERENCE.md)
+- **Testing and safety details:** [TESTING_GUIDE.md](./TESTING_GUIDE.md)
+- **Architecture and rationale:** [docs/ADR.md](./docs/ADR.md)
+- **Contributor scripts:** [scripts/README.md](./scripts/README.md)
 
 ## License
 
