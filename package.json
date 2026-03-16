@@ -38,24 +38,26 @@
   "dependencies": {
     "@git-stunts/alfred": "^0.10.3",
     "@git-stunts/docker-guard": "^0.1.0",
-    "@git-stunts/git-cas": "^5.3.1",
-    "@git-stunts/git-warp": "^14.0.0",
+    "@git-stunts/git-cas": "^5.3.2",
+    "@git-stunts/git-warp": "^14.3.0",
     "@git-stunts/plumbing": "^2.8.0",
     "@git-stunts/trailer-codec": "^2.1.1",
-    "@git-stunts/vault": "^1.0.0"
+    "@git-stunts/vault": "^1.0.1"
   },
   "overrides": {
+    "minimatch": "10.2.4",
     "@git-stunts/git-warp": {
-      "@git-stunts/git-cas": "5.3.1"
+      "@git-stunts/git-cas": "5.3.2"
     }
   },
   "pnpm": {
     "overrides": {
-      "@git-stunts/git-warp>@git-stunts/git-cas": "5.3.1"
+      "minimatch": "10.2.4",
+      "@git-stunts/git-warp>@git-stunts/git-cas": "5.3.2"
     }
   },
   "devDependencies": {
-    "@playwright/test": "^1.57.0",
-    "vitest": "^4.0.16"
+    "@playwright/test": "^1.58.2",
+    "vitest": "^4.1.0"
   }
 }
