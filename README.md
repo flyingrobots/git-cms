@@ -2,17 +2,21 @@
 
 <img src="./docs/images/hero.png" width="600" alt="Burnt-Out Linux Penguin" align="right" />
 
-A serverless, database-free CMS built on Git plumbing.
+A Git-native, database-free CMS: article bodies in commit messages, publish by moving refs.
 
 > "I'm using `git push` as my API endpoint."
 
-`git-cms` treats Git as an application substrate, not just a version-control tool. Articles live in commit messages, drafts and published state live in refs, and history falls out of the storage model instead of being layered on afterward.
+`git-cms` treats Git as an application substrate, not just a version-control tool. Article bodies live in commit messages on empty-tree commits. Draft and published state live in refs. History falls out of the storage model instead of being layered on afterward.
 
 Full article: [Git as CMS](https://flyingrobots.dev/git-stunts/git-cms)
 
+If you want the runnable appendix rather than the essay, use the companion doc:
+
+- [docs/GIT_CMS_COMPANION.md](./docs/GIT_CMS_COMPANION.md)
+
 ## If You Came Here From The Blog Post
 
-Use the reader-safe path first:
+Use the reader-safe path first. It is isolated, seeded, and meant for live poking around:
 
 ```bash
 git clone https://github.com/flyingrobots/git-cms.git
@@ -36,10 +40,6 @@ git -C "$GIT_CMS_REPO" log refs/_blog/dev/articles/hello-world --graph --oneline
 
 Open [http://localhost:4638](http://localhost:4638) while `npm run sandbox` is running.
 
-If you want the runnable appendix rather than the essay, use the companion doc:
-
-- [docs/GIT_CMS_COMPANION.md](./docs/GIT_CMS_COMPANION.md)
-
 ## Runtime Modes
 
 | Mode | Command | Repo Location | Best For |
@@ -59,14 +59,15 @@ Compatibility aliases:
 - `npm run playground:shell`
 - `npm run playground:logs`
 
-## Why This Repo Exists
+## What This Repo Proves
 
-The core stunt is narrow:
+The stunt is narrow on purpose:
 
-- drafts are commits
 - article bodies live in commit messages
-- published state is another ref
-- publish is pointer movement
+- article commits point to the empty tree
+- draft state lives at `refs/_blog/dev/articles/<slug>`
+- published state lives at `refs/_blog/dev/published/<slug>`
+- publishing is pointer movement
 - restore writes a new commit from old content
 - history is the storage model
 
@@ -120,6 +121,8 @@ git -C "$GIT_CMS_REPO" log refs/_blog/dev/articles/hello-world --graph --oneline
 - Publishing moves `refs/_blog/dev/published/<slug>` to the current draft tip.
 - Restoring an old version creates a new commit instead of rewriting history.
 
+This is the core of the stunt. Before Git can pretend to be a CMS, it has to behave like storage and state first.
+
 ## Safety Notes
 
 The reader-safe commands are safe because they do **not** use the checkout as the runtime repo:
@@ -139,6 +142,7 @@ If you are here because of the article, start with `demo` or `sandbox`, not `dev
 ## Feature Snapshot
 
 - **Database-free:** No SQL, no NoSQL, just Git objects and refs
+- **Ref-native state model:** Draft and published state are explicit refs, not database rows
 - **Fast-forward publish semantics:** Published refs only move to the current draft tip
 - **Atomic publishes:** Publish is a CAS-protected ref update
 - **Infinite history:** Every draft save is a commit

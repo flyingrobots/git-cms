@@ -12,7 +12,7 @@
 
 ### Project Overview
 
-**git-cms** is a serverless, database-free Content Management System that treats Git's object store as a distributed, cryptographically verifiable document database. Instead of storing content in traditional databases (SQL or NoSQL), it leverages Git's Merkle DAG to create an append-only ledger for articles, metadata, and encrypted assets.
+**git-cms** is a Git-native, database-free Content Management System built on Git plumbing. Instead of storing content in traditional databases (SQL or NoSQL), it treats Git's object store as a distributed, cryptographically verifiable document database for articles, metadata, and encrypted assets.
 
 The fundamental innovation: **`git push` becomes the API endpoint.**
 
@@ -47,7 +47,7 @@ Users MUST be able to access any historical version of any article without data 
 
 | Priority | Quality Attribute | Description | Measurement |
 |----------|------------------|-------------|-------------|
-| 1 | **Security** | Cryptographic integrity, optional asset encryption, signed commits | GPG verification, AES-256-GCM encryption strength |
+| 1 | **Security** | Cryptographic integrity, optional asset encryption, optional commit signing | GPG verification, AES-256-GCM encryption strength |
 | 2 | **Simplicity** | Minimal dependencies, no database, composable architecture | Lines of code, dependency count, Docker image size |
 | 3 | **Auditability** | Complete provenance of all content changes | Git log completeness, trailer metadata coverage |
 | 4 | **Performance** | Sub-second reads for typical blog workloads | Response time for `readArticle()` |
@@ -211,7 +211,7 @@ Assets are stored by object hash, enabling automatic deduplication. In SHA-1 obj
 **Benefit:** Reduces repository bloat.
 
 #### P-4: Cryptographic Integrity
-Every operation produces a cryptographically signed commit (when `CMS_SIGN=1`). The Merkle DAG ensures tamper detection.
+Every operation produces a Git commit with cryptographic integrity from Git object hashing. Optional commit signing (`CMS_SIGN=1`) adds non-repudiation. The Merkle DAG ensures tamper detection.
 
 **Benefit:** Audit trails are mathematically verifiable, not just trust-based.
 
