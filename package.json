@@ -20,7 +20,8 @@
     "quickstart": "./scripts/quickstart.sh",
     "setup": "./scripts/setup.sh",
     "capture:cms": "node ./scripts/capture-cms-footage.mjs",
-    "capture:git-cas:vhs": "./scripts/render-git-cas-vhs.sh",
+    "capture:git-cas:vhs": "./scripts/render-git-cas-vhs.sh inspect",
+    "capture:git-cas:tui": "./scripts/render-git-cas-vhs.sh dashboard",
     "check:deps": "node scripts/check-dependency-integrity.mjs",
     "check:docs": "./scripts/check-doc-drift.sh",
     "test": "./test/run-docker.sh",
@@ -41,7 +42,7 @@
     "@git-stunts/alfred": "^0.10.3",
     "@git-stunts/docker-guard": "^0.1.0",
     "@git-stunts/git-cas": "^5.3.2",
-    "@git-stunts/git-warp": "^14.3.0",
+    "@git-stunts/git-warp": "^14.8.0",
     "@git-stunts/plumbing": "^2.8.0",
     "@git-stunts/trailer-codec": "^2.1.1",
     "@git-stunts/vault": "^1.0.1"

@@ -8,10 +8,14 @@ Set Padding 16
 Set TypingSpeed 36ms
 Set Framerate 24
 
-Type 'cd "__GIT_CAS_REPO__"'
+Type 'export PS1="$ "'
 Enter
-Sleep 600ms
+Sleep 200ms
 
-Type 'node bin/git-cas.js inspect --slug demo/hello --cwd "__GIT_CAS_MEDIA_REPO__" | cat'
+Type 'cd "__GIT_CAS_SRC__"'
+Enter
+Sleep 400ms
+
+Type 'node bin/git-cas.js inspect --slug demo/hello --cwd ../repo | cat'
 Enter
 Sleep 2s

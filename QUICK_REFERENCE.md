@@ -113,11 +113,22 @@ All endpoints are served by `git cms serve` (default port 4638). Slugs are NFKC-
 | `POST` | `/api/cms/unpublish` | `{ slug }` | Unpublish an article |
 | `POST` | `/api/cms/revert` | `{ slug }` | Revert to draft state |
 | `GET` | `/api/cms/history` | `?slug=xxx&limit=50` | List version history (max 200) |
+| `GET` | `/api/cms/reviews` | `?slug=xxx` | List review lanes for one article |
+| `GET` | `/api/cms/review` | `?slug=xxx&laneId=yyy` | Read one review lane's visible proposal state |
+| `POST` | `/api/cms/review/create` | `{ slug, owner (optional) }` | Create a speculative review lane pinned to the current article state |
+| `POST` | `/api/cms/review/snapshot` | `{ slug, laneId, title, body, trailers (optional) }` | Save speculative edits into a review lane without touching the live draft |
+| `POST` | `/api/cms/review/apply` | `{ slug, laneId }` | Apply a review lane by writing a new draft commit |
 | `GET` | `/api/cms/show-version` | `?slug=xxx&sha=<oid>` | Read a specific historical version |
 | `POST` | `/api/cms/restore` | `{ slug, sha }` | Restore a historical version as new draft |
 | `POST` | `/api/cms/upload` | `{ slug, filename, data }` | Upload base64-encoded asset (optionally encrypted server-side) |
 
 Historical version endpoints currently assume Git's default SHA-1 object format and therefore validate 40-character hexadecimal commit IDs.
+
+Review-lane note:
+
+- review lanes use `git-warp` working sets for speculative editorial state
+- the live draft stays untouched until `POST /api/cms/review/apply`
+- apply writes a new draft commit; it does not replace history or mutate the working set into truth
 
 ---
 

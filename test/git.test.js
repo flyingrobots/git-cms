@@ -470,3 +470,94 @@ describe('Version History', () => {
     expect(article.trailers.restoredat).toBeDefined();
   });
 });
+
+describe('Review Lanes', () => {
+  let cms;
+
+  beforeEach(() => {
+    cms = createTestCms();
+  });
+
+  it('creates and lists review lanes for one article', async () => {
+    await cms.saveSnapshot({ slug: 'review-me', title: 'Draft v1', body: 'body v1' });
+
+    const lane = await cms.createReviewLane({ slug: 'review-me', owner: 'alice' });
+    const listed = await cms.listReviewLanes({ slug: 'review-me' });
+    const loaded = await cms.readReviewLane({ slug: 'review-me', laneId: lane.laneId });
+
+    expect(lane.status).toBe('open');
+    expect(listed).toHaveLength(1);
+    expect(listed[0].laneId).toBe(lane.laneId);
+    expect(listed[0].owner).toBe('alice');
+    expect(loaded.title).toBe('Draft v1');
+    expect(loaded.body).toContain('body v1');
+  });
+
+  it('saves speculative review content without mutating the live article', async () => {
+    await cms.saveSnapshot({ slug: 'review-save', title: 'Live v1', body: 'live body' });
+    const lane = await cms.createReviewLane({ slug: 'review-save' });
+
+    await cms.saveReviewLaneSnapshot({
+      slug: 'review-save',
+      laneId: lane.laneId,
+      title: 'Lane v2',
+      body: 'lane body',
+      trailers: { reviewer: 'alice' },
+    });
+
+    const live = await cms.readArticle({ slug: 'review-save' });
+    const review = await cms.readReviewLane({ slug: 'review-save', laneId: lane.laneId });
+
+    expect(live.title).toBe('Live v1');
+    expect(live.body).toContain('live body');
+    expect(review.title).toBe('Lane v2');
+    expect(review.body).toBe('lane body');
+    expect(review.trailers.reviewer).toBe('alice');
+  });
+
+  it('applies a review lane as a new draft commit and marks the lane applied', async () => {
+    const base = await cms.saveSnapshot({ slug: 'review-apply', title: 'Live v1', body: 'live body' });
+    const lane = await cms.createReviewLane({ slug: 'review-apply', owner: 'alice' });
+
+    await cms.saveReviewLaneSnapshot({
+      slug: 'review-apply',
+      laneId: lane.laneId,
+      title: 'Approved v2',
+      body: 'approved body',
+      trailers: { reviewer: 'alice' },
+    });
+
+    const applied = await cms.applyReviewLane({ slug: 'review-apply', laneId: lane.laneId });
+    const live = await cms.readArticle({ slug: 'review-apply' });
+    const review = await cms.readReviewLane({ slug: 'review-apply', laneId: lane.laneId });
+
+    expect(applied.sha).toBeDefined();
+    expect(applied.sha).not.toBe(base.sha);
+    expect(live.title).toBe('Approved v2');
+    expect(live.body).toContain('approved body');
+    expect(live.trailers.reviewlaneid).toBe(lane.laneId);
+    expect(review.status).toBe('applied');
+    expect(review.appliedDraftSha).toBe(applied.sha);
+  });
+
+  it('rejects applying a stale review lane after the live draft advances', async () => {
+    await cms.saveSnapshot({ slug: 'review-stale', title: 'v1', body: 'body v1' });
+    const lane = await cms.createReviewLane({ slug: 'review-stale' });
+
+    await cms.saveReviewLaneSnapshot({
+      slug: 'review-stale',
+      laneId: lane.laneId,
+      title: 'lane title',
+      body: 'lane body',
+    });
+
+    await cms.saveSnapshot({ slug: 'review-stale', title: 'live v2', body: 'body v2' });
+
+    await expect(
+      cms.applyReviewLane({ slug: 'review-stale', laneId: lane.laneId })
+    ).rejects.toMatchObject({
+      name: 'CmsValidationError',
+      code: 'stale_review_lane',
+    });
+  });
+});

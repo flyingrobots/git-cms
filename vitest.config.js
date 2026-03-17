@@ -2,6 +2,6 @@ import { defineConfig, defaultExclude } from 'vitest/config';
 
 export default defineConfig({
   test: {
-    exclude: [...defaultExclude, 'test/e2e/**', 'test/git-e2e**'],
+    exclude: [...defaultExclude, 'test/e2e/**', 'test/media/**', 'test/git-e2e**'],
   },
 });

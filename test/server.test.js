@@ -384,4 +384,94 @@ describe('Server API (Integration)', () => {
     expect(data.code).toBe('stale_draft_sha');
     expect(data.field).toBe('sha');
   });
+
+  it('creates, lists, edits, and applies a review lane', async () => {
+    const setup = await fetch(`${baseUrl}/api/cms/snapshot`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slug: 'srv-review', title: 'Live v1', body: 'live body' }),
+    });
+    expect(setup.status).toBe(200);
+
+    const create = await fetch(`${baseUrl}/api/cms/review/create`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slug: 'srv-review', owner: 'alice' }),
+    });
+    expect(create.status).toBe(200);
+    const lane = await create.json();
+    expect(lane.laneId).toBeDefined();
+
+    const list = await fetch(`${baseUrl}/api/cms/reviews?slug=srv-review`);
+    expect(list.status).toBe(200);
+    const lanes = await list.json();
+    expect(lanes).toHaveLength(1);
+    expect(lanes[0].laneId).toBe(lane.laneId);
+
+    const saveLane = await fetch(`${baseUrl}/api/cms/review/snapshot`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        slug: 'srv-review',
+        laneId: lane.laneId,
+        title: 'Review v2',
+        body: 'review body',
+        trailers: { reviewer: 'alice' },
+      }),
+    });
+    expect(saveLane.status).toBe(200);
+
+    const apply = await fetch(`${baseUrl}/api/cms/review/apply`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slug: 'srv-review', laneId: lane.laneId }),
+    });
+    expect(apply.status).toBe(200);
+    const applied = await apply.json();
+    expect(applied.sha).toBeDefined();
+
+    const show = await fetch(`${baseUrl}/api/cms/show?slug=srv-review`);
+    expect(show.status).toBe(200);
+    const article = await show.json();
+    expect(article.title).toBe('Review v2');
+    expect(article.trailers.reviewlaneid).toBe(lane.laneId);
+
+    const readLane = await fetch(`${baseUrl}/api/cms/review?slug=srv-review&laneId=${encodeURIComponent(lane.laneId)}`);
+    expect(readLane.status).toBe(200);
+    const readLaneData = await readLane.json();
+    expect(readLaneData.status).toBe('applied');
+  }, 30000);
+
+  it('returns 400 when applying a stale review lane', async () => {
+    const setup = await fetch(`${baseUrl}/api/cms/snapshot`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slug: 'srv-review-stale', title: 'v1', body: 'body v1' }),
+    });
+    expect(setup.status).toBe(200);
+
+    const create = await fetch(`${baseUrl}/api/cms/review/create`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slug: 'srv-review-stale', owner: 'alice' }),
+    });
+    expect(create.status).toBe(200);
+    const lane = await create.json();
+
+    const editLive = await fetch(`${baseUrl}/api/cms/snapshot`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slug: 'srv-review-stale', title: 'v2', body: 'body v2' }),
+    });
+    expect(editLive.status).toBe(200);
+
+    const apply = await fetch(`${baseUrl}/api/cms/review/apply`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slug: 'srv-review-stale', laneId: lane.laneId }),
+    });
+    expect(apply.status).toBe(400);
+    const data = await apply.json();
+    expect(data.code).toBe('stale_review_lane');
+  }, 15000);
 });

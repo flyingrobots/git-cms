@@ -37,38 +37,45 @@ Implementation:
 
 ## `git-cas` terminal capture
 
-This repo also carries a VHS starter for the sibling `git-cas` project so the series can produce consistent terminal-native motion assets.
+This repo also carries VHS starters for the sibling `git-cas` project so the series can produce consistent terminal-native motion assets.
 
 Run it from this repo root:
 
 ```bash
 npm run capture:git-cas:vhs
+npm run capture:git-cas:tui
 ```
 
 Defaults:
 
 - expects the `git-cas` source repo at `$HOME/git/git-stunts/git-cas`
-- creates a temporary throwaway repo at `/tmp/git-cas-vhs-demo`
+- creates a synthetic media root at `/tmp/git-stunts-media`
+- symlinks the real source repo into `/tmp/git-stunts-media/git-cas`
+- creates a throwaway Git repo at `/tmp/git-stunts-media/repo`
 - renders a GIF into `docs/media/generated/git-cas/`
 
 Override the source repo path if needed:
 
 ```bash
 GIT_CAS_REPO=/absolute/path/to/git-cas npm run capture:git-cas:vhs
+GIT_CAS_REPO=/absolute/path/to/git-cas npm run capture:git-cas:tui
 ```
 
 Output file:
 
 - `docs/media/generated/git-cas/git-cas-inspect.gif`
+- `docs/media/generated/git-cas/git-cas-dashboard.gif`
 
 Implementation:
 
 - [vhs/git-cas-inspect.tape](../../vhs/git-cas-inspect.tape)
+- [vhs/git-cas-dashboard.tape](../../vhs/git-cas-dashboard.tape)
 - [scripts/render-git-cas-vhs.sh](../../scripts/render-git-cas-vhs.sh)
 
 ## Notes
 
 - The `git-cms` capture is meant for article-quality browser footage, not test coverage.
 - The filmed restore flow uses a draft-only article because restoring a still-published article is intentionally blocked by the product.
-- The VHS tape focuses on the `git-cas` inspect flow because it is concise, deterministic, and terminal-native.
+- The `git-cas` inspect tape is concise and deterministic. The dashboard tape captures the actual vault TUI.
+- The `git-cas` capture scripts intentionally render from synthetic `/tmp/git-stunts-media/...` paths and set a neutral shell prompt so the media does not leak local checkout paths like `/Users/james/...`.
 - If you want MP4 transcoding or caption burn-ins later, add that as a second pass. The canonical raw outputs here are WebM for browser footage and GIF for VHS.

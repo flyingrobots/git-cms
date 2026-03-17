@@ -66,13 +66,16 @@ Outputs land in `docs/media/generated/git-cms/`.
 
 ### `render-git-cas-vhs.sh`
 
-Renders the `git-cas` terminal GIF used in the broader `Git Stunts` series media pipeline.
+Renders the `git-cas` terminal GIFs used in the broader `Git Stunts` series media pipeline.
 
 Run:
 
 ```bash
 npm run capture:git-cas:vhs
+npm run capture:git-cas:tui
 ```
+
+The script builds a synthetic `/tmp/git-stunts-media` workspace so the rendered media does not expose local checkout paths.
 
 See: [docs/media/README.md](../docs/media/README.md)
 

@@ -6,7 +6,7 @@ A Git-native, database-free CMS: article bodies in commit messages, publish by m
 
 > "I'm using `git push` as my API endpoint."
 
-`git-cms` treats Git as an application substrate, not just a version-control tool. Article bodies live in commit messages on empty-tree commits. Draft and published state live in refs. History falls out of the storage model instead of being layered on afterward.
+`git-cms` treats Git as an application substrate, not just a version-control tool. Article bodies live in commit messages on empty-tree commits. Draft and published state live in refs. History falls out of the storage model instead of being layered on afterward. Review lanes use `git-warp` working sets so speculative edits can stay off the live draft until they are explicitly applied back as a new commit.
 
 Full article: [Git as CMS](https://flyingrobots.dev/git-stunts/git-cms)
 
@@ -69,6 +69,7 @@ The stunt is narrow on purpose:
 - published state lives at `refs/_blog/dev/published/<slug>`
 - publishing is pointer movement
 - restore writes a new commit from old content
+- review lanes live in `git-warp` working sets and apply back as new draft commits
 - history is the storage model
 
 The admin UI exists to prove the model is usable. It is not the point of the project.
@@ -120,6 +121,7 @@ git -C "$GIT_CMS_REPO" log refs/_blog/dev/articles/hello-world --graph --oneline
 - The commit points at the empty tree.
 - Publishing moves `refs/_blog/dev/published/<slug>` to the current draft tip.
 - Restoring an old version creates a new commit instead of rewriting history.
+- Review lanes hold speculative edits off to the side until `Apply Lane` writes them back as a fresh draft commit.
 
 This is the core of the stunt. Before Git can pretend to be a CMS, it has to behave like storage and state first.
 
@@ -146,6 +148,7 @@ If you are here because of the article, start with `demo` or `sandbox`, not `dev
 - **Fast-forward publish semantics:** Published refs only move to the current draft tip
 - **Atomic publishes:** Publish is a CAS-protected ref update
 - **Infinite history:** Every draft save is a commit
+- **Speculative review lanes:** Review lanes use `git-warp` working sets and only affect the live article when you explicitly apply them
 - **Optional asset encryption:** Assets can be encrypted server-side via `@git-stunts/git-cas`
 
 ## Contributor Workflow

@@ -65,6 +65,16 @@ With `npm run sandbox` running:
 
 The important thing is that restore does not rewrite history. It appends a new commit using older content.
 
+## Review Lanes
+
+`git-cms` now has one deliberately narrow editorial feature layered on top of the core draft/publish model: review lanes.
+
+- the live draft stays where it is
+- a review lane stores speculative edits in a `git-warp` working set
+- `Apply Lane` writes those edits back as a new draft commit
+
+That means a review lane is not a second truth. It is a pinned sidecar for proposed edits until you deliberately promote it.
+
 ## Key Code Paths
 
 If you want to read the implementation alongside the article, start here:
@@ -73,6 +83,7 @@ If you want to read the implementation alongside the article, start here:
   - `saveSnapshot()` for draft creation
   - `publishArticle()` for ref movement
   - `getArticleHistory()` and `restoreVersion()` for version browsing and restore
+  - `createReviewLane()`, `saveReviewLaneSnapshot()`, and `applyReviewLane()` for speculative editorial state
 - [src/server/index.js](../src/server/index.js)
   - thin HTTP layer over `CmsService`
 - [scripts/prepare-playground.sh](../scripts/prepare-playground.sh)
@@ -91,10 +102,12 @@ Good fit:
 
 Not the point:
 
-- rich editorial workflows
+- full editorial workflow platforms
 - search and plugin ecosystems
 - collaborative editing
 - mainstream CMS feature parity
+
+The new review lanes are intentionally small. They prove that `git-warp` can hold speculative editorial state cleanly, but they do not turn `git-cms` into a general collaborative CMS.
 
 ## Related Series Entries
 

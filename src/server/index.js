@@ -222,6 +222,78 @@ async function handler(req, res) {
         }
       }
 
+      // GET /api/cms/reviews?slug=xxx
+      if (req.method === 'GET' && pathname === '/api/cms/reviews') {
+        try {
+          const { slug: rawSlug } = query;
+          if (!rawSlug) return send(res, 400, { error: 'slug required' });
+          const slug = canonicalizeSlug(rawSlug);
+          return send(res, 200, await cms.listReviewLanes({ slug }));
+        } catch (err) {
+          logError(err);
+          return sendError(res, err);
+        }
+      }
+
+      // GET /api/cms/review?slug=xxx&laneId=yyy
+      if (req.method === 'GET' && pathname === '/api/cms/review') {
+        try {
+          const { slug: rawSlug, laneId } = query;
+          if (!rawSlug || !laneId) return send(res, 400, { error: 'slug and laneId required' });
+          const slug = canonicalizeSlug(rawSlug);
+          return send(res, 200, await cms.readReviewLane({ slug, laneId }));
+        } catch (err) {
+          logError(err);
+          return sendError(res, err);
+        }
+      }
+
+      // POST /api/cms/review/create
+      if (req.method === 'POST' && pathname === '/api/cms/review/create') {
+        try {
+          const body = await readBody(req);
+          const { slug: rawSlug, owner } = JSON.parse(body || '{}');
+          if (!rawSlug) return send(res, 400, { error: 'slug required' });
+          const slug = canonicalizeSlug(rawSlug);
+          const fallbackOwner = os.userInfo().username || null;
+          const result = await cms.createReviewLane({ slug, owner: owner || fallbackOwner });
+          return send(res, 200, result);
+        } catch (err) {
+          logError(err);
+          return sendError(res, err);
+        }
+      }
+
+      // POST /api/cms/review/snapshot
+      if (req.method === 'POST' && pathname === '/api/cms/review/snapshot') {
+        try {
+          const body = await readBody(req);
+          const { slug: rawSlug, laneId, title, body: content, trailers } = JSON.parse(body || '{}');
+          if (!rawSlug || !laneId || !title) return send(res, 400, { error: 'slug, laneId, and title required' });
+          const slug = canonicalizeSlug(rawSlug);
+          const result = await cms.saveReviewLaneSnapshot({ slug, laneId, title, body: content, trailers });
+          return send(res, 200, result);
+        } catch (err) {
+          logError(err);
+          return sendError(res, err);
+        }
+      }
+
+      // POST /api/cms/review/apply
+      if (req.method === 'POST' && pathname === '/api/cms/review/apply') {
+        try {
+          const body = await readBody(req);
+          const { slug: rawSlug, laneId } = JSON.parse(body || '{}');
+          if (!rawSlug || !laneId) return send(res, 400, { error: 'slug and laneId required' });
+          const slug = canonicalizeSlug(rawSlug);
+          const result = await cms.applyReviewLane({ slug, laneId });
+          return send(res, 200, result);
+        } catch (err) {
+          logError(err);
+          return sendError(res, err);
+        }
+      }
+
       // GET /api/cms/show-version?slug=xxx&sha=yyy
       if (req.method === 'GET' && pathname === '/api/cms/show-version') {
         try {

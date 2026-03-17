@@ -2,14 +2,16 @@
 
 Series terminal captures live here.
 
-Current tape:
+Current tapes:
 
 - [git-cas-inspect.tape](./git-cas-inspect.tape)
+- [git-cas-dashboard.tape](./git-cas-dashboard.tape)
 
-The tape is rendered from the `git-cms` repo root via:
+Render them from the `git-cms` repo root via:
 
 ```bash
 npm run capture:git-cas:vhs
+npm run capture:git-cas:tui
 ```
 
-That script prepares a throwaway `git-cas` demo repo, exports the needed environment variables, and writes the GIF into `docs/media/generated/git-cas/`.
+The render script stages a clean `/tmp/git-stunts-media` workspace, prepares a throwaway `git-cas` demo repo, and writes GIFs into `docs/media/generated/git-cas/` without exposing local checkout paths.
