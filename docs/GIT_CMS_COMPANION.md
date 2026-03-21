@@ -48,7 +48,7 @@ The sandbox starts with an intentionally useful state:
 
 - `hello-world` published at v1
 - draft v2 and v3 ahead of published
-- enough history to make restore interesting immediately
+- enough history to make the draft/published split and append-only restore model visible immediately
 
 That means the repo and UI are alive on first load. You do not have to create the interesting state by hand before the stunt becomes visible.
 
@@ -61,9 +61,10 @@ With `npm run sandbox` running:
 3. Compare the current draft with the published ref
 4. Open the History panel
 5. Preview an older version
-6. Restore it and watch a new draft commit appear
+6. Try Restore and note that the UI blocks it while the article is published
+7. Unpublish, then restore, and watch a new draft commit appear
 
-The important thing is that restore does not rewrite history. It appends a new commit using older content.
+The important thing is that restore does not rewrite history. It appends a new commit using older content, but only once the article is no longer in the `published` state.
 
 ## Review Lanes
 
