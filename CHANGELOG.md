@@ -4,6 +4,8 @@ All notable changes to git-cms are documented in this file.
 
 ## [Unreleased]
 
+## [1.2.1] — 2026-03-21
+
 ### Changed
 
 - **Publish surface cleanup:** npm packaging is now explicitly scoped with a `files` allowlist, and the README hero image now uses a stable hosted URL so release tarballs only ship runtime-relevant assets.
@@ -177,7 +179,8 @@ All notable changes to git-cms are documented in this file.
 - Admin UI: `selectVersion` guards against out-of-order async responses (prevents stale preview flash from rapid clicks)
 - **(P2) walkLimit divergence:** Extracted `HISTORY_WALK_LIMIT` as a shared exported constant used by both `_validateAncestry` and the server's history limit clamp
 
-[Unreleased]: https://github.com/flyingrobots/git-cms/compare/v1.2.0...main
+[Unreleased]: https://github.com/flyingrobots/git-cms/compare/v1.2.1...main
+[1.2.1]: https://github.com/flyingrobots/git-cms/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/flyingrobots/git-cms/compare/v1.1.5...v1.2.0
 [1.1.5]: https://github.com/flyingrobots/git-cms/compare/v1.1.4...v1.1.5
 [1.1.4]: https://github.com/flyingrobots/git-cms/compare/v1.1.3...v1.1.4
