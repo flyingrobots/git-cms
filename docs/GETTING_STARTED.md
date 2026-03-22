@@ -103,7 +103,7 @@ What you should see:
 - the article body inside the commit message
 - an empty-tree commit
 - a published ref behind the current draft ref
-- multiple restore-worthy historical commits
+- multiple historical commits worth browsing and restoring
 
 ## Seeded Sandbox State
 
@@ -111,7 +111,7 @@ The sandbox deliberately starts with an interesting repo:
 
 - `hello-world` published at v1
 - draft v2 and v3 ahead of published
-- a history chain you can browse and restore immediately
+- a history chain you can browse immediately and restore after unpublishing
 
 That means the UI is alive on first load and the Git inspection commands have something real to show.
 
@@ -124,9 +124,10 @@ While `npm run sandbox` is running:
 3. Compare the current draft with the published state
 4. Open the History panel
 5. Preview an older version
-6. Restore it and watch a new commit appear
+6. Try Restore and note that the UI blocks it while the article is still published
+7. Unpublish, then restore, and watch a new draft commit appear
 
-The important thing to notice is that restore does **not** rewrite history. It appends a new draft commit with old content.
+The important thing to notice is that restore does **not** rewrite history. It appends a new draft commit with old content, but only after the article leaves the `published` state.
 
 ## Contributor Path
 
@@ -166,7 +167,7 @@ To stop services and remove volumes:
 docker compose down -v
 ```
 
-That removes the long-lived playground repo volume too.
+That removes the long-lived sandbox repo volume too.
 
 ## Tests
 

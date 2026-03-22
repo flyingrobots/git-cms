@@ -2,8 +2,8 @@
 ## Database-Free Content Management via Git Plumbing
 
 **Status:** Active
-**Version:** 1.0.0
-**Last Updated:** 2026-01-11
+**Version:** 1.2.1
+**Last Updated:** 2026-03-21
 **Author:** James Ross
 
 ---
@@ -418,7 +418,7 @@ Output:
 
 ---
 
-#### Module 3: `@git-stunts/git-warp` (v14.0.0)
+#### Module 3: `@git-stunts/git-warp` (v14.8.0)
 **Purpose:** Graph database primitive using commits on empty trees.
 
 **Public API:**
@@ -448,7 +448,7 @@ async commitNode({ message, parents = [], sign = false }) {
 
 ---
 
-#### Module 4: `@git-stunts/git-cas` (v5.3.0)
+#### Module 4: `@git-stunts/git-cas` (v5.3.2)
 **Purpose:** Content-Addressable Store for large files.
 
 **Public API:**
@@ -482,7 +482,7 @@ class ContentAddressableStore {
 
 ---
 
-#### Module 5: `@git-stunts/vault` (v1.0.0)
+#### Module 5: `@git-stunts/vault` (v1.0.1)
 **Purpose:** OS keychain integration for secrets.
 
 **Public API:**
@@ -885,7 +885,7 @@ graph TB
         TestRunner --> TempRepos
     end
 
-    DevMachine -->|docker compose up playground| NodeApp
+    DevMachine -->|npm run sandbox| NodeApp
     Browser -->|HTTP:4638| NodeApp
     DevMachine -->|docker compose run test| TestRunner
 
@@ -955,7 +955,7 @@ CMD ["npm", "run", "test:local"]
 
 **Deployment Steps:**
 ```bash
-docker compose up playground    # Start isolated seeded playground on http://localhost:4638
+docker compose up playground    # Start isolated seeded sandbox on http://localhost:4638
 docker compose up app           # Start contributor dev server against the checkout repo
 docker compose run --rm test  # Run tests in isolated container
 ```

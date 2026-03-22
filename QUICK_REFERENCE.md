@@ -124,6 +124,12 @@ All endpoints are served by `git cms serve` (default port 4638). Slugs are NFKC-
 
 Historical version endpoints currently assume Git's default SHA-1 object format and therefore validate 40-character hexadecimal commit IDs.
 
+Restore note:
+
+- `POST /api/cms/restore` appends a new draft commit from historical content
+- the article must not currently be in the `published` state
+- history remains append-only
+
 Review-lane note:
 
 - review lanes use `git-warp` working sets for speculative editorial state

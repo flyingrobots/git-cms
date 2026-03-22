@@ -14,6 +14,8 @@ If you want the runnable appendix rather than the essay, use the companion doc:
 
 - [docs/GIT_CMS_COMPANION.md](./docs/GIT_CMS_COMPANION.md)
 
+If you want the shortest possible first contact, run `npm run demo`. If you want a live system you can keep poking at, run `npm run sandbox`.
+
 ## If You Came Here From The Blog Post
 
 Use the reader-safe path first. It is isolated, seeded, and meant for live poking around:
@@ -68,7 +70,7 @@ The stunt is narrow on purpose:
 - draft state lives at `refs/_blog/dev/articles/<slug>`
 - published state lives at `refs/_blog/dev/published/<slug>`
 - publishing is pointer movement
-- restore writes a new commit from old content
+- restore writes a new commit from old content after the article is unpublished
 - review lanes live in `git-warp` working sets and apply back as new draft commits
 - history is the storage model
 
@@ -102,7 +104,7 @@ This starts the HTTP server on port `4638` against an isolated seeded repo. The 
 
 - `hello-world` published at v1
 - two later draft commits ahead of published
-- enough history to make restore interesting immediately
+- enough history to make version browsing and restore interesting immediately
 
 ### 4. Inspect the seeded repo
 
@@ -120,7 +122,7 @@ git -C "$GIT_CMS_REPO" log refs/_blog/dev/articles/hello-world --graph --oneline
 - The article content is stored in the commit message.
 - The commit points at the empty tree.
 - Publishing moves `refs/_blog/dev/published/<slug>` to the current draft tip.
-- Restoring an old version creates a new commit instead of rewriting history.
+- Restoring an old version requires unpublishing first, then creates a new commit instead of rewriting history.
 - Review lanes hold speculative edits off to the side until `Apply Lane` writes them back as a fresh draft commit.
 
 This is the core of the stunt. Before Git can pretend to be a CMS, it has to behave like storage and state first.

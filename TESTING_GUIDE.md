@@ -131,8 +131,8 @@ That also removes the long-lived sandbox repo volume.
 If you intentionally want to use the CLI on your host outside Docker, do it only in a dedicated repo you do not care about yet.
 
 ```bash
-mkdir ~/git-cms-playground
-cd ~/git-cms-playground
+mkdir ~/git-cms-sandbox
+cd ~/git-cms-sandbox
 git init
 git config user.name "Your Name"
 git config user.email "you@example.com"
