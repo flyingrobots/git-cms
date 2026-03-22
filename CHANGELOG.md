@@ -4,6 +4,15 @@ All notable changes to git-cms are documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- **Publish surface cleanup:** npm packaging is now explicitly scoped with a `files` allowlist, and the README hero image now uses a stable hosted URL so release tarballs only ship runtime-relevant assets.
+
+### Fixed
+
+- **Guided demo stability:** `prepare-playground.sh` no longer deletes existing refs when `GIT_CMS_SKIP_SEED=1`, so `npm run demo` preserves state correctly across draft, publish, and Git inspection steps.
+- **Release docs consistency:** Removed the stale duplicate unreleased changelog section, fixed the historical `1.1.0` link, and updated remaining reader-facing `playground` wording to the canonical `sandbox` name.
+
 ## [1.2.0] — 2026-03-21
 
 ### Added

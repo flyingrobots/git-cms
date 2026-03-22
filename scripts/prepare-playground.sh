@@ -22,6 +22,11 @@ fi
 git -C "$REPO_DIR" config user.name "$AUTHOR_NAME"
 git -C "$REPO_DIR" config user.email "$AUTHOR_EMAIL"
 
+if [ "$SKIP_SEED" = "1" ]; then
+  echo "Initialized repo at ${REPO_DIR} without seeding."
+  exit 0
+fi
+
 seed_is_complete() {
   local draft_sha published_sha history_count
   draft_sha="$(git -C "$REPO_DIR" rev-parse -q --verify "$DRAFT_REF" 2>/dev/null || true)"
@@ -56,11 +61,6 @@ if [ -n "$existing_refs" ]; then
 
   echo "Playground repo contains incomplete state under ${REF_PREFIX}; repairing seeded refs."
   delete_seed_refs
-fi
-
-if [ "$SKIP_SEED" = "1" ]; then
-  echo "Initialized repo at ${REPO_DIR} without seeding."
-  exit 0
 fi
 
 run_cms() {

@@ -138,6 +138,47 @@ describe('playground bootstrap', () => {
     expect(history).toHaveLength(3);
   }, 30000);
 
+  it('does not delete existing refs when seeding is explicitly skipped', () => {
+    const skipSeedEnv = {
+      ...process.env,
+      GIT_CMS_SKIP_SEED: '1',
+      GIT_AUTHOR_NAME: 'Playground Bot',
+      GIT_AUTHOR_EMAIL: 'playground@example.com',
+      GIT_COMMITTER_NAME: 'Playground Bot',
+      GIT_COMMITTER_EMAIL: 'playground@example.com',
+    };
+
+    run('bash', [prepareScript, repoDir], {
+      cwd: repoRoot,
+      env: skipSeedEnv,
+    });
+
+    const draftOutput = run('node', [cliEntrypoint, 'draft', 'hello-world', 'Demo Draft'], {
+      cwd: callerDir,
+      env: {
+        ...process.env,
+        GIT_CMS_REPO: repoDir,
+        CMS_REF_PREFIX: refPrefix,
+        GIT_AUTHOR_NAME: 'Playground Bot',
+        GIT_AUTHOR_EMAIL: 'playground@example.com',
+        GIT_COMMITTER_NAME: 'Playground Bot',
+        GIT_COMMITTER_EMAIL: 'playground@example.com',
+      },
+      input: '# Demo Draft\n',
+    });
+    const draftSha = draftOutput.match(/Saved draft: ([0-9a-f]+)/)?.[1];
+
+    expect(draftSha).toBeTruthy();
+
+    run('bash', [prepareScript, repoDir], {
+      cwd: repoRoot,
+      env: skipSeedEnv,
+    });
+
+    const afterDraft = run('git', ['rev-parse', `${refPrefix}/articles/hello-world`], { cwd: repoDir }).trim();
+    expect(afterDraft).toBe(draftSha);
+  }, 30000);
+
   it('cli honors GIT_CMS_REPO outside the current working directory', async () => {
     run('git', ['init'], { cwd: repoDir });
     run('git', ['config', 'user.name', 'CLI Test'], { cwd: repoDir });
