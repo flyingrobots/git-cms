@@ -23,8 +23,8 @@ importers:
         specifier: ^5.3.2
         version: 5.3.2
       '@git-stunts/git-warp':
-        specifier: ^14.3.0
-        version: 14.3.0
+        specifier: ^14.8.0
+        version: 14.16.2
       '@git-stunts/plumbing':
         specifier: ^2.8.0
         version: 2.8.0
@@ -266,8 +266,8 @@ packages:
     engines: {node: '>=22.0.0'}
     hasBin: true
 
-  '@git-stunts/git-warp@14.3.0':
-    resolution: {integrity: sha512-tCYSQyEdIXljbxETL/WRv9SRg45j8TDl2lj97UjOv9kcUhLJ3dE8ctimajbSLsnOxJTgD/oO8SKXSHkxx9k47Q==}
+  '@git-stunts/git-warp@14.16.2':
+    resolution: {integrity: sha512-PHVTay67Agg/E+4fBufZei8OAV5dZO9qbupNGiM/leJ2NCdzstyH03wac5SJ7iW0Uh/4s3weTPoWXx9vvCBegg==}
     engines: {node: '>=22.0.0'}
     hasBin: true
 
@@ -1186,7 +1186,7 @@ snapshots:
       commander: 14.0.3
       zod: 3.25.76
 
-  '@git-stunts/git-warp@14.3.0':
+  '@git-stunts/git-warp@14.16.2':
     dependencies:
       '@git-stunts/alfred': 0.4.0
       '@git-stunts/git-cas': 5.3.2

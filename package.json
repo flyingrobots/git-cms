@@ -1,6 +1,6 @@
 {
   "name": "git-cms",
-  "version": "1.1.5",
+  "version": "1.2.0",
   "description": "A Git-native, database-free CMS: article bodies in commit messages, publish by moving refs.",
   "homepage": "https://flyingrobots.dev/git-stunts/git-cms",
   "type": "module",

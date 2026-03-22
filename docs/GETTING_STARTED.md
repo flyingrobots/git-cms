@@ -1,6 +1,6 @@
 # Getting Started with Git CMS
 
-> Validated against v1.1.5 on 2026-03-15.
+> Validated against v1.2.0 on 2026-03-21.
 
 This guide is optimized for people arriving from the blog post. If you just want to see the stunt, use the reader-safe paths first.
 

@@ -626,6 +626,7 @@
       selectedVersion: null,
       reviewLanes: [],
       activeReviewLane: null,
+      reviewLaneRequestId: 0,
     };
 
     /* ── API Layer ── */
@@ -1254,15 +1255,21 @@
       },
 
       async fetchReviewLanes() {
-        if (!state.currentSlug) {
+        const slug = state.currentSlug;
+        if (!slug) {
+          state.reviewLaneRequestId += 1;
           state.reviewLanes = [];
           this.renderReviewLanes();
           return;
         }
+        const requestId = ++state.reviewLaneRequestId;
         try {
-          state.reviewLanes = await api.listReviews(state.currentSlug);
+          const lanes = await api.listReviews(slug);
+          if (state.currentSlug !== slug || requestId !== state.reviewLaneRequestId) return;
+          state.reviewLanes = lanes;
           this.renderReviewLanes();
         } catch (err) {
+          if (state.currentSlug !== slug || requestId !== state.reviewLaneRequestId) return;
           state.reviewLanes = [];
           this.renderReviewLanes();
           toast('Failed to load review lanes', 'error');

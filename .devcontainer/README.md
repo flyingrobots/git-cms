@@ -7,7 +7,7 @@ It intentionally supports the existing contributor workflow:
 - `npm run dev`
 - `npm test`
 - `npm run test:e2e`
-- `npm run playground`
+- `npm run sandbox`
 
 Why it exists:
 
@@ -19,6 +19,6 @@ Why it exists:
 It is **not** the main reader quickstart. Blog readers should start with:
 
 - `npm run demo`
-- `npm run playground`
+- `npm run sandbox`
 
 Those paths are documented in [README.md](../README.md) and [docs/GETTING_STARTED.md](../docs/GETTING_STARTED.md).

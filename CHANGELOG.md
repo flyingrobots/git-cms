@@ -2,6 +2,31 @@
 
 All notable changes to git-cms are documented in this file.
 
+## [Unreleased]
+
+## [1.2.0] — 2026-03-21
+
+### Added
+
+- **Reader-safe sandbox workflow:** Added a seeded long-lived `playground` container workflow with `sandbox` aliases, `GIT_CMS_REPO=/data/repo`, deterministic bootstrap, and host-side smoke coverage.
+- **Review lanes:** Added speculative editorial review lanes backed by `git-warp` working sets, including `CmsService` support, HTTP endpoints, admin UI controls, and E2E/integration tests.
+- **Blog and media support:** Added a public companion walkthrough (`docs/GIT_CMS_COMPANION.md`), reproducible browser/VHS media capture pipeline, and a contributor devcontainer.
+
+### Changed
+
+- **CLI repo root selection:** `bin/git-cms.js` now honors `GIT_CMS_REPO` before `process.cwd()`.
+- **Public onboarding:** README, quick reference, testing guide, ADR, and getting-started docs now distinguish `demo`, `sandbox`, and contributor `dev` modes explicitly.
+- **Dependencies:** Upgraded to `@git-stunts/git-cas` 5.3.2, `@git-stunts/git-warp` 14.8.0, `@git-stunts/vault` 1.0.1, `@playwright/test` 1.58.2, and `vitest` 4.1.0, with npm/pnpm overrides for patched transitives.
+
+### Fixed
+
+- **Published draft behavior:** Published articles can now accept newer draft commits while the published ref stays pinned until the next explicit publish.
+- **Publish semantics:** `publishArticle()` now only moves the published ref to the current draft tip; supplied `sha` values act as stale-write guards instead of arbitrary publish targets.
+- **Sandbox/bootstrap robustness:** Playground bootstrap now repairs incomplete seeded state instead of silently accepting any partial namespace.
+- **Warning noise:** Suppressed the `DEP0169` `url.parse()` warning from transitive dependencies and removed the `NO_COLOR`/`FORCE_COLOR` startup warning in wrapped entrypoints.
+- **Upload path handling:** Server upload path now uses the sanitized basename consistently when writing the temporary file and invoking asset storage.
+- **Version-restore UX/docs alignment:** Companion and reader docs now describe restore accurately: history is always visible, but published articles must be unpublished before restore.
+
 ## [1.1.5] — 2026-02-14
 
 ### Fixed
@@ -143,7 +168,9 @@ All notable changes to git-cms are documented in this file.
 - Admin UI: `selectVersion` guards against out-of-order async responses (prevents stale preview flash from rapid clicks)
 - **(P2) walkLimit divergence:** Extracted `HISTORY_WALK_LIMIT` as a shared exported constant used by both `_validateAncestry` and the server's history limit clamp
 
-[Unreleased]: https://github.com/flyingrobots/git-cms/compare/main...git-stunts
+[Unreleased]: https://github.com/flyingrobots/git-cms/compare/v1.2.0...main
+[1.2.0]: https://github.com/flyingrobots/git-cms/compare/v1.1.5...v1.2.0
+[1.1.5]: https://github.com/flyingrobots/git-cms/compare/v1.1.4...v1.1.5
 [1.1.4]: https://github.com/flyingrobots/git-cms/compare/v1.1.3...v1.1.4
 [1.1.3]: https://github.com/flyingrobots/git-cms/compare/v1.1.2...v1.1.3
 [1.1.2]: https://github.com/flyingrobots/git-cms/compare/v1.1.1...v1.1.2

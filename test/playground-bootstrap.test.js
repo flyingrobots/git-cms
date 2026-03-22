@@ -90,6 +90,54 @@ describe('playground bootstrap', () => {
     expect(afterPublished).toBe(beforePublished);
   }, 30000);
 
+  it('repairs incomplete seeded state instead of silently accepting it', async () => {
+    run('bash', [prepareScript, repoDir], {
+      cwd: repoRoot,
+      env: {
+        ...process.env,
+        GIT_CMS_SKIP_SEED: '1',
+        GIT_AUTHOR_NAME: 'Playground Bot',
+        GIT_AUTHOR_EMAIL: 'playground@example.com',
+        GIT_COMMITTER_NAME: 'Playground Bot',
+        GIT_COMMITTER_EMAIL: 'playground@example.com',
+      },
+    });
+
+    run('node', [cliEntrypoint, 'draft', 'hello-world', 'Partial Seed'], {
+      cwd: callerDir,
+      env: {
+        ...process.env,
+        GIT_CMS_REPO: repoDir,
+        CMS_REF_PREFIX: refPrefix,
+        GIT_AUTHOR_NAME: 'Playground Bot',
+        GIT_AUTHOR_EMAIL: 'playground@example.com',
+        GIT_COMMITTER_NAME: 'Playground Bot',
+        GIT_COMMITTER_EMAIL: 'playground@example.com',
+      },
+      input: '# Partial Seed\n',
+    });
+
+    run('bash', [prepareScript, repoDir], {
+      cwd: repoRoot,
+      env: {
+        ...process.env,
+        GIT_AUTHOR_NAME: 'Playground Bot',
+        GIT_AUTHOR_EMAIL: 'playground@example.com',
+        GIT_COMMITTER_NAME: 'Playground Bot',
+        GIT_COMMITTER_EMAIL: 'playground@example.com',
+      },
+    });
+
+    const cms = new CmsService({ cwd: repoDir, refPrefix });
+    const draft = await cms.readArticle({ slug: 'hello-world' });
+    const published = await cms.readArticle({ slug: 'hello-world', kind: 'published' });
+    const history = await cms.getArticleHistory({ slug: 'hello-world', limit: 10 });
+
+    expect(draft.title).toBe('Hello World (Draft)');
+    expect(published.title).toBe('Hello World');
+    expect(history).toHaveLength(3);
+  }, 30000);
+
   it('cli honors GIT_CMS_REPO outside the current working directory', async () => {
     run('git', ['init'], { cwd: repoDir });
     run('git', ['config', 'user.name', 'CLI Test'], { cwd: repoDir });
