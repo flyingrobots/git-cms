@@ -97,7 +97,7 @@ All notable changes to git-cms are documented in this file.
 - **Migration framework** (`src/lib/LayoutMigration.js`): `readLayoutVersion`, `writeLayoutVersion`, `pendingMigrations`, `migrate` — forward-only, idempotent layout migrations stored in `cms.layout.version` git config
 - **CLI commands:** `git-cms migrate` (run pending migrations) and `git-cms layout-version` (print repo + codebase versions)
 
-## [Unreleased] — git-stunts branch
+## Pre-1.1.0 History — git-stunts branch
 
 ### Added
 
@@ -175,4 +175,4 @@ All notable changes to git-cms are documented in this file.
 [1.1.3]: https://github.com/flyingrobots/git-cms/compare/v1.1.2...v1.1.3
 [1.1.2]: https://github.com/flyingrobots/git-cms/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/flyingrobots/git-cms/compare/v1.1.0...v1.1.1
-[1.1.0]: https://github.com/flyingrobots/git-cms/compare/v1.0.2...v1.1.0
+[1.1.0]: https://github.com/flyingrobots/git-cms/tree/v1.1.0

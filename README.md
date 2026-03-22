@@ -1,6 +1,6 @@
 # git-cms
 
-<img src="./docs/images/hero.png" width="600" alt="Burnt-Out Linux Penguin" align="right" />
+<img src="https://raw.githubusercontent.com/flyingrobots/git-cms/main/docs/images/hero.png" width="600" alt="Burnt-Out Linux Penguin" align="right" />
 
 A Git-native, database-free CMS: article bodies in commit messages, publish by moving refs.
 

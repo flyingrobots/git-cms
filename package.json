@@ -4,6 +4,20 @@
   "description": "A Git-native, database-free CMS: article bodies in commit messages, publish by moving refs.",
   "homepage": "https://flyingrobots.dev/git-stunts/git-cms",
   "type": "module",
+  "files": [
+    "bin",
+    "src",
+    "public",
+    "scripts",
+    "docs/GIT_CMS_COMPANION.md",
+    "Dockerfile",
+    "docker-compose.yml",
+    "README.md",
+    "CHANGELOG.md",
+    "GETTING_STARTED.md",
+    "QUICK_REFERENCE.md",
+    "TESTING_GUIDE.md"
+  ],
   "bin": {
     "git-cms": "./bin/git-cms.js"
   },

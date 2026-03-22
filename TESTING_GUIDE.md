@@ -78,7 +78,7 @@ npm run test:sandbox
 
 This host-side smoke test:
 
-- boots the seeded `playground` service
+- boots the seeded `sandbox` service
 - verifies the API responds with `hello-world`
 - verifies the sandbox repo contains both `articles` and `published` refs
 - verifies the checkout’s own `refs/_blog/*` are unchanged
